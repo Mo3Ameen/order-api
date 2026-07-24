@@ -25,4 +25,16 @@ public class Category {
     @OneToMany(mappedBy = "category")
     @JsonIgnore
     private Set<MenuItem> menuItems = new HashSet<>();
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Category other)) return false;
+        return id != null && id.equals(other.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }

@@ -34,4 +34,16 @@ public class OrderedItem {
     private Order order;
     @OneToMany(mappedBy = "orderedItem", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<SelectedExtra> selectedExtras = new HashSet<>();
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof OrderedItem other)) return false;
+        return id != null && id.equals(other.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }

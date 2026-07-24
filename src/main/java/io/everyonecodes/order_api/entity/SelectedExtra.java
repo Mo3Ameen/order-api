@@ -28,4 +28,16 @@ public class SelectedExtra {
     @JoinColumn(name = "ordered_item_id")
     @JsonIgnore
     private OrderedItem orderedItem;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof SelectedExtra other)) return false;
+        return id != null && id.equals(other.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }
