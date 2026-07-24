@@ -1,6 +1,7 @@
 package io.everyonecodes.order_api.service;
 
 import io.everyonecodes.order_api.entity.Extra;
+import io.everyonecodes.order_api.entity.MenuItem;
 import io.everyonecodes.order_api.repository.ExtraRepository;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +20,10 @@ public class ExtraService {
 
     public List<Extra> findAll() {
         return repository.findAll();
+    }
+
+    public List<Extra> findByMenuItemsContainingAndIsActive(MenuItem menuItem) {
+        return repository.findByMenuItemsContainingAndIsActive(menuItem, true);
     }
 
     public Optional<Extra> findById(Long id) {
