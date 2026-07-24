@@ -23,7 +23,7 @@ public class Order {
     private Long id;
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-    @Column(name = "total_price", precision = 7, scale = 5)
+    @Column(name = "total_price", precision = 7, scale = 2)
     private BigDecimal totalPrice;
     @Column(name = "is_paid")
     private Boolean isPaid;
