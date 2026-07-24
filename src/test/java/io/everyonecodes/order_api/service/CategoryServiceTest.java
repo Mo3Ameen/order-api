@@ -28,19 +28,26 @@ class CategoryServiceTest {
 //        service = new CategoryService(repository);
 //    }
 
-    private final List<Category> allCategories = List.of(
-            new Category(1L, "Pizzas", true, new HashSet<>()),
-            new Category(2L, "Deserts", false, new HashSet<>()),
-            new Category(3L, "Drinks", true, new HashSet<>())
-    );
-
     @Test
     void findAll() {
+
+        List<Category> allCategories = List.of(
+                new Category(1L, "Pizzas", true, new HashSet<>()),
+                new Category(2L, "Deserts", false, new HashSet<>()),
+                new Category(3L, "Drinks", true, new HashSet<>())
+        );
+
         when(repository.findAll()).thenReturn(allCategories);
 
         var result = service.findAll();
 
-        assertEquals(allCategories, result);
+        var expected = List.of(
+                new Category(1L, "Pizzas", true, new HashSet<>()),
+                new Category(2L, "Deserts", false, new HashSet<>()),
+                new Category(3L, "Drinks", true, new HashSet<>())
+        );
+
+        assertEquals(expected, result);
 
         verify(repository).findAll();
         verifyNoMoreInteractions(repository);
@@ -73,9 +80,7 @@ class CategoryServiceTest {
         var result = service.findById(id);
 
         assertTrue(result.isPresent());
-        assertEquals(expected.getId(), result.get().getId());
-        assertEquals(expected.getName(), result.get().getName());
-        assertEquals(expected.getIsActive(), result.get().getIsActive());
+        assertEquals(expected, result.get());
 
         verify(repository).findById(id);
         verifyNoMoreInteractions(repository);
@@ -105,7 +110,7 @@ class CategoryServiceTest {
 
         var result = service.save(newEntity);
 
-        assertEquals(expected.getId(), result.getId());
+        assertEquals(expected, result);
 
         verify(repository).save(newEntity);
         verifyNoMoreInteractions(repository);
@@ -120,7 +125,7 @@ class CategoryServiceTest {
 
         var result = service.save(existingEntity);
 
-        assertEquals(existingEntity.getId(), result.getId());
+        assertEquals(existingEntity, result);
 
         verify(repository).save(existingEntity);
         verifyNoMoreInteractions(repository);

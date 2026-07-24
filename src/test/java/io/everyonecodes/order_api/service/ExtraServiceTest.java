@@ -27,19 +27,25 @@ class ExtraServiceTest {
     @Mock
     private ExtraRepository repository;
 
-    private final List<Extra> extras = List.of(
-            new Extra(1L, "Extra Cheese", BigDecimal.valueOf(1.5), true, new HashSet<>()),
-            new Extra(2L, "Bacon", BigDecimal.valueOf(2), false, new HashSet<>()),
-            new Extra(3L, "Mushrooms", BigDecimal.valueOf(1), true, new HashSet<>())
-    );
-
     @Test
     void findAll() {
+        List<Extra> extras = List.of(
+                new Extra(1L, "Extra Cheese", BigDecimal.valueOf(1.5), true, new HashSet<>()),
+                new Extra(2L, "Bacon", BigDecimal.valueOf(2), false, new HashSet<>()),
+                new Extra(3L, "Mushrooms", BigDecimal.valueOf(1), true, new HashSet<>())
+        );
+
         when(repository.findAll()).thenReturn(extras);
 
         var result = service.findAll();
 
-        assertEquals(extras, result);
+        List<Extra> expected = List.of(
+                new Extra(1L, "Extra Cheese", BigDecimal.valueOf(1.5), true, new HashSet<>()),
+                new Extra(2L, "Bacon", BigDecimal.valueOf(2), false, new HashSet<>()),
+                new Extra(3L, "Mushrooms", BigDecimal.valueOf(1), true, new HashSet<>())
+        );
+
+        assertEquals(expected, result);
 
         verify(repository).findAll();
         verifyNoMoreInteractions(repository);
@@ -61,7 +67,7 @@ class ExtraServiceTest {
 
         var result = service.findByMenuItemsContainingAndIsActive(item);
 
-        assertEquals(extra.getId(), result.getFirst().getId());
+        assertEquals(extra, result.getFirst());
 
         verify(repository).findByMenuItemsContainingAndIsActive(item, true);
         verifyNoMoreInteractions(repository);
@@ -77,9 +83,7 @@ class ExtraServiceTest {
         var result = service.findById(id);
 
         assertTrue(result.isPresent());
-        assertEquals(expected.getId(), result.get().getId());
-        assertEquals(expected.getName(), result.get().getName());
-        assertEquals(expected.getIsActive(), result.get().getIsActive());
+        assertEquals(expected, result.get());
 
         verify(repository).findById(id);
         verifyNoMoreInteractions(repository);
@@ -109,7 +113,7 @@ class ExtraServiceTest {
 
         var result = service.save(newEntity);
 
-        assertEquals(expected.getId(), result.getId());
+        assertEquals(expected, result);
 
         verify(repository).save(newEntity);
         verifyNoMoreInteractions(repository);
@@ -124,7 +128,7 @@ class ExtraServiceTest {
 
         var result = service.save(existingEntity);
 
-        assertEquals(existingEntity.getId(), result.getId());
+        assertEquals(existingEntity, result);
 
         verify(repository).save(existingEntity);
         verifyNoMoreInteractions(repository);
