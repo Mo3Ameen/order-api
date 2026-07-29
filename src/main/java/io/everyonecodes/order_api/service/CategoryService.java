@@ -1,6 +1,7 @@
 package io.everyonecodes.order_api.service;
 
 import io.everyonecodes.order_api.entity.Category;
+import io.everyonecodes.order_api.exception.ResourceNotFoundException;
 import io.everyonecodes.order_api.repository.CategoryRepository;
 import org.springframework.stereotype.Service;
 
@@ -34,5 +35,9 @@ public class CategoryService {
 
     public void deleteById(Long id) {
         repository.deleteById(id);
+    }
+
+    public Category getByIdOrThrow(Long id) {
+        return findById(id).orElseThrow(() -> new ResourceNotFoundException("Category " + id + " not found"));
     }
 }
