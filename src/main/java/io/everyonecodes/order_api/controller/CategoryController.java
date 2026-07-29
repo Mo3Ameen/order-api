@@ -32,7 +32,7 @@ public class CategoryController {
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public Category getCategoryById(@PathVariable Long id) {
-        return getCategory(id);
+        return service.getByIdOrThrow(id);
     }
 
     @PostMapping
@@ -53,12 +53,8 @@ public class CategoryController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCategoryById(@PathVariable Long id) {
-        getCategory(id);
+        service.getByIdOrThrow(id);
         service.deleteById(id);
         return ResponseEntity.noContent().build();
-    }
-
-    private @NonNull Category getCategory(Long id) {
-        return service.findById(id).orElseThrow(() -> new ResourceNotFoundException("Category " + id + " not found"));
     }
 }
