@@ -22,7 +22,7 @@ public class CategoryService {
     }
 
     public List<Category> findAllActive() {
-        return repository.findByIsActive(true);
+        return repository.findAllByIsActive(true);
     }
 
     public Optional<Category> findById(Long id) {
@@ -38,6 +38,6 @@ public class CategoryService {
     }
 
     public Category getByIdOrThrow(Long id) {
-        return findById(id).orElseThrow(() -> new ResourceNotFoundException("Category " + id + " not found"));
+        return repository.findByIdAndIsActiveTrue(id).orElseThrow(() -> new ResourceNotFoundException("Category " + id + " not found"));
     }
 }

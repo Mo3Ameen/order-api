@@ -61,13 +61,13 @@ class CategoryServiceTest {
                 new Category(3L, "Drinks", true, new HashSet<>())
                 );
 
-        when(repository.findByIsActive(true)).thenReturn(expected);
+        when(repository.findAllByIsActive(true)).thenReturn(expected);
 
         var result = service.findAllActive();
 
         assertEquals(expected, result);
 
-        verify(repository).findByIsActive(true);
+        verify(repository).findAllByIsActive(true);
         verifyNoMoreInteractions(repository);
     }
 
@@ -146,13 +146,13 @@ class CategoryServiceTest {
         Long id = 1L;
         var expected = new Category(id, "Pizzas", true, new HashSet<>());
 
-        when(repository.findById(id)).thenReturn(Optional.of(expected));
+        when(repository.findByIdAndIsActiveTrue(id)).thenReturn(Optional.of(expected));
 
         var result = service.getByIdOrThrow(id);
 
         assertEquals(expected, result);
 
-        verify(repository).findById(id);
+        verify(repository).findByIdAndIsActiveTrue(id);
         verifyNoMoreInteractions(repository);
     }
 
@@ -160,14 +160,14 @@ class CategoryServiceTest {
     void getByIdOrThrow_withNonExistingCategory_throws() {
         Long id = 4L;
 
-        when(repository.findById(id)).thenReturn(Optional.empty());
+        when(repository.findByIdAndIsActiveTrue(id)).thenReturn(Optional.empty());
 
         var exception = assertThrows(ResourceNotFoundException.class, () -> service.getByIdOrThrow(id));
 
         String expectedMessage = "Category " + id + " not found";
         assertEquals(expectedMessage, exception.getMessage());
 
-        verify(repository).findById(id);
+        verify(repository).findByIdAndIsActiveTrue(id);
         verifyNoMoreInteractions(repository);
     }
 }
