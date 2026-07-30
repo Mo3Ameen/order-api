@@ -8,8 +8,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/extras")
 public class ExtraController {
@@ -20,21 +18,10 @@ public class ExtraController {
         this.service = service;
     }
 
-    @GetMapping
-    @ResponseStatus(HttpStatus.OK)
-    public List<Extra> getExtras() {
-        return service.findAll();
-    }
-
-    @GetMapping("/{id}")
-    @ResponseStatus(HttpStatus.OK)
-    public Extra getExtraById(@PathVariable Long id) {
-        return getExtra(id);
-    }
-
     @PostMapping
     public ResponseEntity<Extra> createExtra(@RequestBody Extra extra) {
         extra.setId(null);
+        extra.setIsActive(extra.getIsActive() != null ? extra.getIsActive() : true);
         Extra saved = service.save(extra);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
@@ -51,8 +38,9 @@ public class ExtraController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteExtraById(@PathVariable Long id) {
-        getExtra(id);
-        service.deleteById(id);
+        Extra extra = getExtra(id);
+        extra.setIsActive(false);
+        service.save(extra);
         return ResponseEntity.noContent().build();
     }
 
