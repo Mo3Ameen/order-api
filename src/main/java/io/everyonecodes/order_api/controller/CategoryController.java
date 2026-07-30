@@ -1,6 +1,7 @@
 package io.everyonecodes.order_api.controller;
 
 import io.everyonecodes.order_api.entity.Category;
+import io.everyonecodes.order_api.entity.MenuItem;
 import io.everyonecodes.order_api.exception.ResourceNotFoundException;
 import io.everyonecodes.order_api.service.CategoryService;
 import org.jspecify.annotations.NonNull;
@@ -22,11 +23,8 @@ public class CategoryController {
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    public List<Category> getCategories(@RequestParam(required = false) Boolean isActive) {
-        if (isActive != null && isActive) {
-            return service.findAllActive();
-        }
-        return service.findAll();
+    public List<Category> getCategories() {
+        return service.findAllActive();
     }
 
     @GetMapping("/{id}")
@@ -38,6 +36,7 @@ public class CategoryController {
     @PostMapping
     public ResponseEntity<Category> createCategory(@RequestBody Category category) {
         category.setId(null);
+        category.setIsActive(category.getIsActive() != null ? category.getIsActive() : true);
         Category saved = service.save(category);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
@@ -53,8 +52,9 @@ public class CategoryController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCategoryById(@PathVariable Long id) {
-        service.getByIdOrThrow(id);
-        service.deleteById(id);
+        Category category = service.getByIdOrThrow(id);
+        category.setIsActive(false);
+        service.save(category);
         return ResponseEntity.noContent().build();
     }
 }
