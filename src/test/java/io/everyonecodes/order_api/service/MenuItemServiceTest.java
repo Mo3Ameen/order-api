@@ -2,6 +2,7 @@ package io.everyonecodes.order_api.service;
 
 import io.everyonecodes.order_api.entity.Category;
 import io.everyonecodes.order_api.entity.MenuItem;
+import io.everyonecodes.order_api.exception.ResourceNotFoundException;
 import io.everyonecodes.order_api.repository.MenuItemRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -140,6 +141,35 @@ class MenuItemServiceTest {
         service.deleteById(id);
 
         verify(repository).deleteById(id);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void findByIdAndIsActiveOrThrow_withExistingMenuItem() {
+        Long id = 1L;
+        var expected = new MenuItem(1L, "Pizza", "", BigDecimal.valueOf(10), "", true, new HashSet<>(), null);
+
+        when(repository.findByIdAndIsActiveTrue(id)).thenReturn(Optional.of(expected));
+
+        var result = service.findByIdAndIsActiveOrThrow(id);
+
+        assertEquals(expected, result);
+
+        verify(repository).findByIdAndIsActiveTrue(id);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void findByIdAndIsActiveOrThrow_withNonExistingMenuItem_throws() {
+        Long id = 4L;
+
+        when(repository.findByIdAndIsActiveTrue(id)).thenReturn(Optional.empty());
+
+        var exception = assertThrows(ResourceNotFoundException.class, () -> service.findByIdAndIsActiveOrThrow(id));
+
+        assertEquals("MenuItem " + id + " not found", exception.getMessage());
+
+        verify(repository).findByIdAndIsActiveTrue(id);
         verifyNoMoreInteractions(repository);
     }
 }

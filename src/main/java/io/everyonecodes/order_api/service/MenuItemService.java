@@ -2,6 +2,7 @@ package io.everyonecodes.order_api.service;
 
 import io.everyonecodes.order_api.entity.Category;
 import io.everyonecodes.order_api.entity.MenuItem;
+import io.everyonecodes.order_api.exception.ResourceNotFoundException;
 import io.everyonecodes.order_api.repository.MenuItemRepository;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,10 @@ public class MenuItemService {
 
     public Optional<MenuItem> findById(Long id) {
         return repository.findById(id);
+    }
+
+    public MenuItem findByIdAndIsActiveOrThrow(Long id) {
+        return repository.findByIdAndIsActiveTrue(id).orElseThrow(() -> new ResourceNotFoundException("MenuItem " + id + " not found"));
     }
 
     public List<MenuItem> findByCategoryAndIsActive(Category category) {
