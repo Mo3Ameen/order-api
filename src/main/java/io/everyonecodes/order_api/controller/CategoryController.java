@@ -1,12 +1,8 @@
 package io.everyonecodes.order_api.controller;
 
 import io.everyonecodes.order_api.entity.Category;
-import io.everyonecodes.order_api.entity.MenuItem;
-import io.everyonecodes.order_api.exception.ResourceNotFoundException;
 import io.everyonecodes.order_api.service.CategoryService;
-import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,31 +26,6 @@ public class CategoryController {
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public Category getCategoryById(@PathVariable Long id) {
-        return service.getByIdOrThrow(id);
-    }
-
-    @PostMapping
-    public ResponseEntity<Category> createCategory(@RequestBody Category category) {
-        category.setId(null);
-        category.setIsActive(category.getIsActive() != null ? category.getIsActive() : true);
-        Category saved = service.save(category);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Category> updateCategory(@RequestBody Category category, @PathVariable Long id) {
-        Category existingCategory = service.findById(id).orElseThrow(() -> new ResourceNotFoundException(("Category " + id + " not found")));
-        existingCategory.setName(category.getName());
-        existingCategory.setIsActive(category.getIsActive());
-        Category saved = service.save(existingCategory);
-        return ResponseEntity.status(HttpStatus.OK).body(saved);
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCategoryById(@PathVariable Long id) {
-        Category category = service.getByIdOrThrow(id);
-        category.setIsActive(false);
-        service.save(category);
-        return ResponseEntity.noContent().build();
+        return service.getByIdAndIsActiveOrThrow(id);
     }
 }

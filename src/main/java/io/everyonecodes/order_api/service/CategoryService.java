@@ -17,12 +17,18 @@ public class CategoryService {
         this.repository = repository;
     }
 
-    public List<Category> findAll() {
-        return repository.findAll();
-    }
-
+    // public/client methods
     public List<Category> findAllActive() {
         return repository.findAllByIsActive(true);
+    }
+
+    public Category getByIdAndIsActiveOrThrow(Long id) {
+        return repository.findByIdAndIsActiveTrue(id).orElseThrow(() -> new ResourceNotFoundException("Category " + id + " not found"));
+    }
+
+    // private/admin methods (for later)
+    public List<Category> findAll() {
+        return repository.findAll();
     }
 
     public Optional<Category> findById(Long id) {
@@ -37,7 +43,30 @@ public class CategoryService {
         repository.deleteById(id);
     }
 
-    public Category getByIdOrThrow(Long id) {
-        return repository.findByIdAndIsActiveTrue(id).orElseThrow(() -> new ResourceNotFoundException("Category " + id + " not found"));
+    public Category createCategory(Category category) {
+        category.setId(null);
+        category.setIsActive(category.getIsActive() != null ? category.getIsActive() : true);
+        return save(category);
+    }
+
+    public Category updateCategory(Category category, Long id) {
+        Category existingCategory = getCategoryOrThrow(id);
+        existingCategory.setName(category.getName());
+        existingCategory.setIsActive(category.getIsActive());
+        return save(existingCategory);
+    }
+
+    public void softDeleteCategoryById(Long id) {
+        Category category = getByIdOrThrow(id);
+        category.setIsActive(false);
+        save(category);
+    }
+
+    public Category getByIdOrThrow(Long categoryId) {
+        return getCategoryOrThrow(categoryId);
+    }
+
+    private Category getCategoryOrThrow(Long categoryId) {
+        return repository.findById(categoryId).orElseThrow(() -> new ResourceNotFoundException("Category " + categoryId + " not found"));
     }
 }
