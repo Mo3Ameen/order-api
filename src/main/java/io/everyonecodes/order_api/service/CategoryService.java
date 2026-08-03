@@ -46,27 +46,23 @@ public class CategoryService {
     public Category createCategory(Category category) {
         category.setId(null);
         category.setIsActive(category.getIsActive() != null ? category.getIsActive() : true);
-        return save(category);
+        return repository.save(category);
     }
 
     public Category updateCategory(Category category, Long id) {
-        Category existingCategory = getCategoryOrThrow(id);
+        Category existingCategory = getByIdOrThrow( id);
         existingCategory.setName(category.getName());
         existingCategory.setIsActive(category.getIsActive());
-        return save(existingCategory);
+        return repository.save(existingCategory);
     }
 
     public void softDeleteCategoryById(Long id) {
         Category category = getByIdOrThrow(id);
         category.setIsActive(false);
-        save(category);
+        repository.save(category);
     }
 
     public Category getByIdOrThrow(Long categoryId) {
-        return getCategoryOrThrow(categoryId);
-    }
-
-    private Category getCategoryOrThrow(Long categoryId) {
         return repository.findById(categoryId).orElseThrow(() -> new ResourceNotFoundException("Category " + categoryId + " not found"));
     }
 }
