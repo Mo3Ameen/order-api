@@ -114,7 +114,7 @@ public class OrderService {
         return save(order);
     }
 
-    public BigDecimal calculateTotalPrice(Order order) {
+    private BigDecimal calculateTotalPrice(Order order) {
         if (order.getOrderedItems() == null) {
             return BigDecimal.ZERO;
         }
