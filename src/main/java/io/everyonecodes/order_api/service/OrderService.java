@@ -46,7 +46,7 @@ public class OrderService {
         order.setCreatedAt(LocalDateTime.now());
         order.setIsPaid(false);
         order.setTotalPrice(BigDecimal.ZERO);
-        return save(order);
+        return orderRepository.save(order);
     }
 
     @Transactional
@@ -100,7 +100,7 @@ public class OrderService {
         order.getOrderedItems().add(orderedItem);
         order.setTotalPrice(calculateTotalPrice(order));
 
-        return save(order);
+        return orderRepository.save(order);
     }
 
     @Transactional
@@ -111,26 +111,7 @@ public class OrderService {
 
         order.getOrderedItems().remove(orderedItem);
         order.setTotalPrice(calculateTotalPrice(order));
-        return save(order);
-    }
-
-    private BigDecimal calculateTotalPrice(Order order) {
-        if (order.getOrderedItems() == null) {
-            return BigDecimal.ZERO;
-        }
-
-        return order.getOrderedItems().stream()
-                .map(item -> {
-                    BigDecimal extrasTotal = item.getSelectedExtras() == null ? BigDecimal.ZERO : item.getSelectedExtras().stream()
-                            .map(SelectedExtra::getPriceAtPurchase)
-                            .map(price -> price == null ? BigDecimal.ZERO : price)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-                    BigDecimal itemPrice = item.getPriceAtPurchase() == null ? BigDecimal.ZERO : item.getPriceAtPurchase();
-
-                    return extrasTotal.add(itemPrice).multiply(BigDecimal.valueOf(item.getQuantity()));
-                })
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return orderRepository.save(order);
     }
 
     @Transactional
@@ -144,7 +125,7 @@ public class OrderService {
         } else {
             order.setCustomerEmail(email);
             order.setIsPaid(true);
-            return save(order);
+            return orderRepository.save(order);
         }
     }
 
@@ -162,7 +143,7 @@ public class OrderService {
 
         order.setTotalPrice(calculateTotalPrice(order));
 
-        return save(order);
+        return orderRepository.save(order);
     }
 
     @Transactional
@@ -180,7 +161,7 @@ public class OrderService {
         item.getSelectedExtras().remove(extra);
         order.setTotalPrice(calculateTotalPrice(order));
 
-        return save(order);
+        return orderRepository.save(order);
     }
 
     @Transactional
@@ -214,7 +195,30 @@ public class OrderService {
         item.getSelectedExtras().add(selectedExtra);
         order.setTotalPrice(calculateTotalPrice(order));
 
-        return save(order);
+        return orderRepository.save(order);
+    }
+
+    public Order findByIdOrThrow(Long id) {
+        return orderRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Order "+ id + " not found"));
+    }
+
+    private BigDecimal calculateTotalPrice(Order order) {
+        if (order.getOrderedItems() == null) {
+            return BigDecimal.ZERO;
+        }
+
+        return order.getOrderedItems().stream()
+                .map(item -> {
+                    BigDecimal extrasTotal = item.getSelectedExtras() == null ? BigDecimal.ZERO : item.getSelectedExtras().stream()
+                            .map(SelectedExtra::getPriceAtPurchase)
+                            .map(price -> price == null ? BigDecimal.ZERO : price)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    BigDecimal itemPrice = item.getPriceAtPurchase() == null ? BigDecimal.ZERO : item.getPriceAtPurchase();
+
+                    return extrasTotal.add(itemPrice).multiply(BigDecimal.valueOf(item.getQuantity()));
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private static OrderedItem getOrderedItemFromOrder(Order order, Long orderedItemId) {
