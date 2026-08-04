@@ -5,6 +5,7 @@ import io.everyonecodes.order_api.exception.ResourceNotFoundException;
 import io.everyonecodes.order_api.repository.CategoryRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -17,17 +18,11 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class CategoryServiceTest {
 
-    @InjectMocks // This replaces the setUp() method.
+    @InjectMocks
     private CategoryService service;
 
     @Mock
     private CategoryRepository repository;
-
-    // If there were no @InjectMocks annotation then use this.
-//    @BeforeEach
-//    void setUp() {
-//        service = new CategoryService(repository);
-//    }
 
     @Test
     void findAll() {
@@ -142,13 +137,13 @@ class CategoryServiceTest {
     }
 
     @Test
-    void getByIdOrThrow_withExistingCategory() {
+    void getByIdAndIsActiveOrThrow_withExistingCategory() {
         Long id = 1L;
         var expected = new Category(id, "Pizzas", true, new HashSet<>());
 
         when(repository.findByIdAndIsActiveTrue(id)).thenReturn(Optional.of(expected));
 
-        var result = service.getByIdOrThrow(id);
+        var result = service.getByIdAndIsActiveOrThrow(id);
 
         assertEquals(expected, result);
 
@@ -157,17 +152,71 @@ class CategoryServiceTest {
     }
 
     @Test
-    void getByIdOrThrow_withNonExistingCategory_throws() {
+    void getByIdAndIsActiveOrThrow_withNonExistingCategory_throws() {
         Long id = 4L;
 
         when(repository.findByIdAndIsActiveTrue(id)).thenReturn(Optional.empty());
 
-        var exception = assertThrows(ResourceNotFoundException.class, () -> service.getByIdOrThrow(id));
+        var exception = assertThrows(ResourceNotFoundException.class, () -> service.getByIdAndIsActiveOrThrow(id));
 
         String expectedMessage = "Category " + id + " not found";
         assertEquals(expectedMessage, exception.getMessage());
 
         verify(repository).findByIdAndIsActiveTrue(id);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void createCategory() {
+        var inputCategory = new Category(5L, "Salads", null, new HashSet<>());
+        var expectedSaved = new Category(null, "Salads", true, new HashSet<>());
+
+        when(repository.save(any(Category.class))).thenReturn(expectedSaved);
+
+        var result = service.createCategory(inputCategory);
+
+        assertEquals(expectedSaved, result);
+        assertTrue(expectedSaved.getIsActive());
+        verify(repository).save(any(Category.class));
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void softDeleteCategoryById() {
+        Long id = 1L;
+        var existingCategory = new Category(id, "Pizzas", true, new HashSet<>());
+
+        when(repository.findById(id)).thenReturn(Optional.of(existingCategory));
+        when(repository.save(any(Category.class))).thenReturn(existingCategory);
+
+        service.softDeleteCategoryById(id);
+
+        assertFalse(existingCategory.getIsActive());
+        verify(repository).findById(id);
+        verify(repository).save(existingCategory);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void updateCategory() {
+        Long id = 1L;
+
+        var inputCategory = new Category();
+        inputCategory.setName("Updated Pizza");
+        inputCategory.setIsActive(false);
+
+        var existingCategory = new Category(id, "Old Pizza", true, new HashSet<>());
+
+        when(repository.findById(id)).thenReturn(Optional.of(existingCategory));
+        when(repository.save(existingCategory)).thenReturn(existingCategory);
+
+        var result = service.updateCategory(inputCategory, id);
+
+        assertEquals("Updated Pizza", result.getName());
+        assertFalse(result.getIsActive());
+
+        verify(repository).findById(id);
+        verify(repository).save(existingCategory);
         verifyNoMoreInteractions(repository);
     }
 }

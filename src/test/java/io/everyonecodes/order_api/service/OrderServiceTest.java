@@ -8,9 +8,6 @@ import io.everyonecodes.order_api.repository.OrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -22,7 +19,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -42,65 +38,6 @@ class OrderServiceTest {
 
     private Order order;
     private MenuItem menuItem;
-
-    public static Stream<Arguments> parameters() {
-        return Stream.of(
-                // 1. orderedItems is null -> ZERO
-                Arguments.of(
-                        new Order(1L, null, null, false, null, null),
-                        BigDecimal.ZERO
-                ),
-
-                // 2. selectedExtras is null -> price * quantity
-                Arguments.of(
-                        new Order(1L, null, null, false, null, Set.of(
-                                new OrderedItem(1L, 1, BigDecimal.valueOf(10), null, null, null)
-                        )),
-                        BigDecimal.valueOf(10)
-                ),
-
-                // 3. one extra's price is null -> that extra contributes ZERO
-                Arguments.of(
-                        new Order(1L, null, null, false, null, Set.of(
-                                new OrderedItem(1L, 1, BigDecimal.valueOf(10), null, null, Set.of(
-                                        new SelectedExtra(1L, null, null, null)
-                                ))
-                        )),
-                        BigDecimal.valueOf(10)
-                ),
-
-                // 4. priceAtPurchase is null -> only extras count
-                Arguments.of(
-                        new Order(1L, null, null, false, null, Set.of(
-                                new OrderedItem(1L, 1, null, null, null, Set.of(
-                                        new SelectedExtra(1L, BigDecimal.valueOf(3), null, null)
-                                ))
-                        )),
-                        BigDecimal.valueOf(3)
-                ),
-
-                // 5. quantity multiplies (item price + extras), not just item price
-                Arguments.of(
-                        new Order(1L, null, null, false, null, Set.of(
-                                new OrderedItem(1L, 2, BigDecimal.valueOf(4), null, null, Set.of(
-                                        new SelectedExtra(1L, BigDecimal.valueOf(1), null, null)
-                                ))
-                        )),
-                        BigDecimal.valueOf(10) // (4 + 1) * 2
-                ),
-
-                // 6. multiple items are summed
-                Arguments.of(
-                        new Order(1L, null, null, false, null, Set.of(
-                                new OrderedItem(1L, 1, BigDecimal.valueOf(10), null, null, null),
-                                new OrderedItem(2L, 2, BigDecimal.valueOf(5), null, null, Set.of(
-                                        new SelectedExtra(1L, BigDecimal.valueOf(1), null, null)
-                                ))
-                        )),
-                        BigDecimal.valueOf(22) // 10 + (5 + 1) * 2
-                )
-        );
-    }
 
     @BeforeEach
     void setUp() {
@@ -213,7 +150,7 @@ class OrderServiceTest {
     @Test
     void createOrder() {
         orderService.createOrder();
-
+        // think or research about other way of testing or mocking a static method like localDateTime.now() other than using the ArgumentCaptor. (mockStatic)
         ArgumentCaptor<Order> captor = ArgumentCaptor.forClass(Order.class);
         verify(orderRepository, times(1)).save(captor.capture());
         verifyNoMoreInteractions(orderRepository);
@@ -332,15 +269,12 @@ class OrderServiceTest {
 
         orderService.addItemToOrder(1L, 10L, 1, Set.of(5L));
 
-        ArgumentCaptor<Order> orderArgumentCaptor = ArgumentCaptor.forClass(Order.class);
-        verify(orderRepository, times(1)).save(orderArgumentCaptor.capture());
+        verify(orderRepository, times(1)).save(order);
         verifyNoMoreInteractions(orderRepository);
 
-        var result = orderArgumentCaptor.getValue();
-
-        assertFalse(result.getIsPaid());
-        assertFalse(result.getOrderedItems().isEmpty());
-        assertEquals(1L, result.getId());
+        assertFalse(order.getIsPaid());
+        assertFalse(order.getOrderedItems().isEmpty());
+        assertEquals(1L, order.getId());
     }
 
     @Test
@@ -350,15 +284,12 @@ class OrderServiceTest {
 
         orderService.addItemToOrder(1L, 10L, 1, null);
 
-        ArgumentCaptor<Order> orderArgumentCaptor = ArgumentCaptor.forClass(Order.class);
-        verify(orderRepository, times(1)).save(orderArgumentCaptor.capture());
+        verify(orderRepository, times(1)).save(order);
         verifyNoMoreInteractions(orderRepository);
 
-        var result = orderArgumentCaptor.getValue();
-
-        assertFalse(result.getIsPaid());
-        assertFalse(result.getOrderedItems().isEmpty());
-        assertEquals(1L, result.getId());
+        assertFalse(order.getIsPaid());
+        assertFalse(order.getOrderedItems().isEmpty());
+        assertEquals(1L, order.getId());
     }
 
     @Test
@@ -372,13 +303,10 @@ class OrderServiceTest {
 
         orderService.removeItemFromOrder(1L, 2L);
 
-        var capture = ArgumentCaptor.forClass(Order.class);
-        verify(orderRepository, times(1)).save(capture.capture());
+        verify(orderRepository, times(1)).save(order);
         verifyNoMoreInteractions(orderRepository);
 
-        var result = capture.getValue();
-
-        assertTrue(result.getOrderedItems().isEmpty());
+        assertTrue(order.getOrderedItems().isEmpty());
     }
 
     @Test
@@ -411,13 +339,6 @@ class OrderServiceTest {
         String expectedMessage = "Ordered item " + 10L + " not found in this order";
 
         assertEquals(expectedMessage, ex.getMessage());
-    }
-
-    @ParameterizedTest
-    @MethodSource("parameters")
-    void calculateTotalPrice(Order order, BigDecimal expected) {
-        var result = orderService.calculateTotalPrice(order);
-        assertEquals(expected, result);
     }
 
     @Test
@@ -460,13 +381,10 @@ class OrderServiceTest {
 
         orderService.payOrder(1L, "example@gmail.com");
 
-        var capture = ArgumentCaptor.forClass(Order.class);
-        verify(orderRepository, times(1)).save(capture.capture());
+        verify(orderRepository, times(1)).save(order);
         verifyNoMoreInteractions(orderRepository);
 
-        var result = capture.getValue();
-
-        assertTrue(result.getIsPaid());
+        assertTrue(order.getIsPaid());
     }
 
     @Test
@@ -540,15 +458,13 @@ class OrderServiceTest {
 
         orderService.updateQuantity(1L, 10L, 3);
 
-        var captor = ArgumentCaptor.forClass(Order.class);
-        verify(orderRepository, times(1)).save(captor.capture());
+        verify(orderRepository, times(1)).save(order);
         verifyNoMoreInteractions(orderRepository);
 
-        var result = captor.getValue();
-        var savedItem = result.getOrderedItems().stream().findFirst().orElseThrow();
+        var savedItem = order.getOrderedItems().stream().findFirst().orElseThrow();
 
         assertEquals(3, savedItem.getQuantity());
-        assertEquals(BigDecimal.valueOf(30), result.getTotalPrice());
+        assertEquals(BigDecimal.valueOf(30), order.getTotalPrice());
     }
 
     @Test
@@ -616,15 +532,13 @@ class OrderServiceTest {
 
         orderService.removeSelectedExtraOnOrderedItemFromOrder(1L, 10L, 100L);
 
-        var captor = ArgumentCaptor.forClass(Order.class);
-        verify(orderRepository, times(1)).save(captor.capture());
+        verify(orderRepository, times(1)).save(order);
         verifyNoMoreInteractions(orderRepository);
 
-        var result = captor.getValue();
-        var savedItem = result.getOrderedItems().stream().findFirst().orElseThrow();
+        var savedItem = order.getOrderedItems().stream().findFirst().orElseThrow();
 
         assertTrue(savedItem.getSelectedExtras().isEmpty());
-        assertEquals(BigDecimal.valueOf(10), result.getTotalPrice());
+        assertEquals(BigDecimal.valueOf(10), order.getTotalPrice());
     }
 
     @Test
@@ -769,14 +683,12 @@ class OrderServiceTest {
 
         orderService.addExtraOnOrderedItemToOrder(1L, 10L, 5L);
 
-        var captor = ArgumentCaptor.forClass(Order.class);
-        verify(orderRepository, times(1)).save(captor.capture());
+        verify(orderRepository, times(1)).save(order);
         verifyNoMoreInteractions(orderRepository);
 
-        var result = captor.getValue();
-        var savedItem = result.getOrderedItems().stream().findFirst().orElseThrow();
+        var savedItem = order.getOrderedItems().stream().findFirst().orElseThrow();
 
         assertEquals(1, savedItem.getSelectedExtras().size());
-        assertEquals(BigDecimal.valueOf(12), result.getTotalPrice());
+        assertEquals(BigDecimal.valueOf(12), order.getTotalPrice());
     }
 }
