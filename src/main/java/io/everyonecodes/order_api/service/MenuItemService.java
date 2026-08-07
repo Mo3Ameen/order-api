@@ -9,7 +9,6 @@ import io.everyonecodes.order_api.repository.MenuItemRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class MenuItemService {
@@ -39,15 +38,15 @@ public class MenuItemService {
         return extraService.findByMenuItemsContainingAndIsActive(item);
     }
 
-    // private/admin methods (for later)
+    // private/admin methods
     public MenuItem findByIdOrThrow(Long id) {
-        return findById(id).orElseThrow(() -> new ResourceNotFoundException("MenuItem " + id + " not found"));
+        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("MenuItem " + id + " not found"));
     }
 
     public void softDeleteMenuItemById( Long id) {
         MenuItem menuItem = findByIdOrThrow(id);
         menuItem.setIsActive(false);
-        save(menuItem);
+        repository.save(menuItem);
     }
 
     public MenuItem postMenuItem(MenuItemRequestDto menuItemRequestDto) {
@@ -55,36 +54,24 @@ public class MenuItemService {
         menuItem.setPrice(menuItemRequestDto.getPrice());
         menuItem.setName(menuItemRequestDto.getName());
         menuItem.setDescription(menuItemRequestDto.getDescription());
-        menuItem.setCategory(categoryService.getByIdOrThrow(menuItemRequestDto.getCategoryId()));
+        menuItem.setCategory(categoryService.findByIdOrThrow(menuItemRequestDto.getCategoryId()));
         menuItem.setImageUrl(menuItemRequestDto.getImageUrl());
         menuItem.setIsActive(menuItemRequestDto.getIsActive() != null ? menuItemRequestDto.getIsActive() : true);
-        return save(menuItem);
+        return repository.save(menuItem);
     }
 
     public MenuItem putMenuItem(MenuItemRequestDto menuItemRequestDto, Long id) {
         MenuItem existingMenuItem = findByIdOrThrow(id);
-        existingMenuItem.setCategory(categoryService.getByIdOrThrow(menuItemRequestDto.getCategoryId()));
+        existingMenuItem.setCategory(categoryService.findByIdOrThrow(menuItemRequestDto.getCategoryId()));
         existingMenuItem.setPrice(menuItemRequestDto.getPrice());
         existingMenuItem.setName(menuItemRequestDto.getName());
         existingMenuItem.setDescription(menuItemRequestDto.getDescription());
         existingMenuItem.setIsActive(menuItemRequestDto.getIsActive());
         existingMenuItem.setImageUrl(menuItemRequestDto.getImageUrl());
-        return save(existingMenuItem);
+        return repository.save(existingMenuItem);
     }
 
     public List<MenuItem> findAll() {
         return repository.findAll();
-    }
-
-    public Optional<MenuItem> findById(Long id) {
-        return repository.findById(id);
-    }
-
-    public MenuItem save(MenuItem menuItem) {
-        return repository.save(menuItem);
-    }
-
-    public void deleteById(Long id) {
-        repository.deleteById(id);
     }
 }

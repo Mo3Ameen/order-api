@@ -58,37 +58,6 @@ class MenuItemServiceTest {
     }
 
     @Test
-    void findById_withExistingMenuItem() {
-        Long id = 1L;
-        var expected = new MenuItem(1L, "Pizza", "", BigDecimal.valueOf(10), "", true, new HashSet<>(), null);
-
-        when(repository.findById(id)).thenReturn(Optional.of(expected));
-
-        var result = service.findById(id);
-
-        assertTrue(result.isPresent());
-        assertEquals(expected, result.get());
-
-        verify(repository).findById(id);
-        verifyNoMoreInteractions(repository);
-    }
-
-    @Test
-    void findById_withNonExistingMenuItem() {
-        Long id = 4L;
-        Optional<MenuItem> expected = Optional.empty();
-
-        when(repository.findById(id)).thenReturn(expected);
-
-        var result = service.findById(id);
-
-        assertFalse(result.isPresent());
-
-        verify(repository).findById(id);
-        verifyNoMoreInteractions(repository);
-    }
-
-    @Test
     void findByCategoryAndIsActive() {
         var category = new Category();
         category.setId(1L);
@@ -111,45 +80,6 @@ class MenuItemServiceTest {
         verify(categoryService).getByIdAndIsActiveOrThrow(1L);
         verify(repository).findByCategoryAndIsActive(category, true);
         verifyNoMoreInteractions(repository, categoryService);
-    }
-
-    @Test
-    void save_newMenuItem() {
-        var newEntity = new MenuItem();
-        var expected = new MenuItem();
-
-        when(repository.save(newEntity)).thenReturn(expected);
-
-        var result = service.save(newEntity);
-
-        assertEquals(expected, result);
-
-        verify(repository).save(newEntity);
-        verifyNoMoreInteractions(repository);
-    }
-
-    @Test
-    void save_existingMenuItem() {
-        var existingEntity = new MenuItem();
-        existingEntity.setId(1L);
-
-        when(repository.save(existingEntity)).thenReturn(existingEntity);
-
-        var result = service.save(existingEntity);
-
-        assertEquals(existingEntity, result);
-
-        verify(repository).save(existingEntity);
-        verifyNoMoreInteractions(repository);
-    }
-
-    @Test
-    void deleteById() {
-        Long id = 3L;
-        service.deleteById(id);
-
-        verify(repository).deleteById(id);
-        verifyNoMoreInteractions(repository);
     }
 
     @Test
@@ -264,7 +194,7 @@ class MenuItemServiceTest {
         var category = new Category();
         category.setId(1L);
 
-        when(categoryService.getByIdOrThrow(1L)).thenReturn(category);
+        when(categoryService.findByIdOrThrow(1L)).thenReturn(category);
 
         when(repository.save(any(MenuItem.class))).thenAnswer(invocation -> invocation.getArguments()[0]);
 
@@ -274,7 +204,22 @@ class MenuItemServiceTest {
         assertEquals(category, result.getCategory());
         assertTrue(result.getIsActive());
 
-        verify(categoryService).getByIdOrThrow(1L);
+        verify(categoryService).findByIdOrThrow(1L);
+        verify(repository).save(any(MenuItem.class));
+        verifyNoMoreInteractions(categoryService, repository);
+    }
+
+    @Test
+    void postMenuItem_preservesAnExplicitInactiveFlag() {
+        var dto = new MenuItemRequestDto("Burger", "", BigDecimal.TEN, "", false, 1L);
+        var category = new Category();
+        when(categoryService.findByIdOrThrow(1L)).thenReturn(category);
+        when(repository.save(any(MenuItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var result = service.postMenuItem(dto);
+
+        assertFalse(result.getIsActive());
+        verify(categoryService).findByIdOrThrow(1L);
         verify(repository).save(any(MenuItem.class));
         verifyNoMoreInteractions(categoryService, repository);
     }
@@ -296,7 +241,7 @@ class MenuItemServiceTest {
         newCategory.setId(2L);
 
         when(repository.findById(id)).thenReturn(Optional.of(existingItem));
-        when(categoryService.getByIdOrThrow(2L)).thenReturn(newCategory);
+        when(categoryService.findByIdOrThrow(2L)).thenReturn(newCategory);
         when(repository.save(existingItem)).thenReturn(existingItem);
 
         var result = service.putMenuItem(dto, id);
@@ -306,7 +251,7 @@ class MenuItemServiceTest {
         assertFalse(result.getIsActive());
 
         verify(repository).findById(id);
-        verify(categoryService).getByIdOrThrow(2L);
+        verify(categoryService).findByIdOrThrow(2L);
         verify(repository).save(existingItem);
         verifyNoMoreInteractions(repository, categoryService);
     }

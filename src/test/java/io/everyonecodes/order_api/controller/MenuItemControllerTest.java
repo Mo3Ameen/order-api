@@ -3,6 +3,7 @@ package io.everyonecodes.order_api.controller;
 import io.everyonecodes.order_api.entity.Category;
 import io.everyonecodes.order_api.entity.Extra;
 import io.everyonecodes.order_api.entity.MenuItem;
+import io.everyonecodes.order_api.dto.MenuItemRequestDto;
 import io.everyonecodes.order_api.repository.CategoryRepository;
 import io.everyonecodes.order_api.repository.ExtraRepository;
 import io.everyonecodes.order_api.repository.MenuItemRepository;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -136,7 +138,7 @@ class MenuItemControllerTest {
     // ---------- GET /api/menuItems/{id} ----------
 
     @Test
-    void getMenuItemById_returnsMenuItem_whenActive() {
+    void getMenuItemById_returnsActiveMenuItem_whenActive() {
         var result = restTestClient.get()
                 .uri("/api/menuItems/{id}", activeMenuItem.getId())
                 .exchange()
@@ -151,7 +153,7 @@ class MenuItemControllerTest {
     }
 
     @Test
-    void getMenuItemById_returns404_whenMenuItemIsInactive() {
+    void getMenuItemById_returns404_whenActiveMenuItemIsInactive() {
         var result = restTestClient.get()
                 .uri("/api/menuItems/{id}", inactiveMenuItem.getId())
                 .exchange()
@@ -164,7 +166,7 @@ class MenuItemControllerTest {
     }
 
     @Test
-    void getMenuItemById_returns404_whenMenuItemDoesNotExist() {
+    void getMenuItemById_returns404_whenActiveMenuItemDoesNotExist() {
         Long nonExistentId = 999999L;
 
         var result = restTestClient.get()
@@ -222,5 +224,78 @@ class MenuItemControllerTest {
                 .getResponseBody();
 
         assertEquals("MenuItem " + nonExistentId + " not found", result);
+    }
+
+    @Test
+    void adminEndpoints_returnAllMenuItemsAndItemsById() {
+        var allItems = restTestClient.get()
+                .uri("/api/menuItems/all")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(MenuItem[].class)
+                .returnResult().getResponseBody();
+        var item = restTestClient.get()
+                .uri("/api/menuItems/all/{id}", inactiveMenuItem.getId())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(MenuItem.class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(allItems);
+        assertTrue(Stream.of(allItems).anyMatch(menuItem -> menuItem.getId().equals(activeMenuItem.getId())));
+        assertTrue(Stream.of(allItems).anyMatch(menuItem -> menuItem.getId().equals(inactiveMenuItem.getId())));
+        assertNotNull(item);
+        assertEquals(inactiveMenuItem.getId(), item.getId());
+    }
+
+    @Test
+    void postMenuItem_createsAnActiveMenuItemByDefault() {
+        var request = new MenuItemRequestDto("Veggie Burger", "Plant based", BigDecimal.valueOf(11), "veggie.jpg", null, activeCategory.getId());
+
+        var result = restTestClient.post()
+                .uri("/api/menuItems")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(MenuItem.class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(result);
+        assertNotNull(result.getId());
+        assertEquals("Veggie Burger", result.getName());
+        assertTrue(result.getIsActive());
+        assertEquals(activeCategory.getId(), result.getCategory().getId());
+    }
+
+    @Test
+    void putMenuItem_updatesEveryField() {
+        var request = new MenuItemRequestDto("Updated Burger", "New description", BigDecimal.valueOf(12), "updated.jpg", false, activeCategory.getId());
+
+        var result = restTestClient.put()
+                .uri("/api/menuItems/{id}", activeMenuItem.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(MenuItem.class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(result);
+        assertEquals("Updated Burger", result.getName());
+        assertEquals("New description", result.getDescription());
+        assertEquals(BigDecimal.valueOf(12), result.getPrice());
+        assertEquals("updated.jpg", result.getImageUrl());
+        assertFalse(result.getIsActive());
+    }
+
+    @Test
+    void deleteMenuItem_softDeletesTheMenuItem() {
+        restTestClient.delete()
+                .uri("/api/menuItems/{id}", activeMenuItem.getId())
+                .exchange()
+                .expectStatus().isNoContent();
+
+        assertFalse(menuItemRepository.findById(activeMenuItem.getId()).orElseThrow().getIsActive());
     }
 }
