@@ -5,7 +5,6 @@ import io.everyonecodes.order_api.exception.ResourceNotFoundException;
 import io.everyonecodes.order_api.repository.CategoryRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -67,76 +66,6 @@ class CategoryServiceTest {
     }
 
     @Test
-    void findById_withExistingCategory() {
-        Long id = 1L;
-        var expected = new Category(id, "Pizzas", true, new HashSet<>());
-
-        when(repository.findById(id)).thenReturn(Optional.of(expected));
-
-        var result = service.findById(id);
-
-        assertTrue(result.isPresent());
-        assertEquals(expected, result.get());
-
-        verify(repository).findById(id);
-        verifyNoMoreInteractions(repository);
-    }
-
-    @Test
-    void findById_withNonExistingCategory() {
-        Long id = 4L;
-        Optional<Category> expected = Optional.empty();
-
-        when(repository.findById(id)).thenReturn(expected);
-
-        var result = service.findById(id);
-
-        assertFalse(result.isPresent());
-
-        verify(repository).findById(id);
-        verifyNoMoreInteractions(repository);
-    }
-
-    @Test
-    void save_newCategory() {
-        var newEntity = new Category();
-        var expected = new Category();
-
-        when(repository.save(newEntity)).thenReturn(expected);
-
-        var result = service.save(newEntity);
-
-        assertEquals(expected, result);
-
-        verify(repository).save(newEntity);
-        verifyNoMoreInteractions(repository);
-    }
-
-    @Test
-    void save_existingCategory() {
-        var existingEntity = new Category();
-        existingEntity.setId(1L);
-
-        when(repository.save(existingEntity)).thenReturn(existingEntity);
-
-        var result = service.save(existingEntity);
-
-        assertEquals(existingEntity, result);
-
-        verify(repository).save(existingEntity);
-        verifyNoMoreInteractions(repository);
-    }
-
-    @Test
-    void deleteById() {
-        Long id = 3L;
-        service.deleteById(id);
-
-        verify(repository).deleteById(id);
-        verifyNoMoreInteractions(repository);
-    }
-
-    @Test
     void getByIdAndIsActiveOrThrow_withExistingCategory() {
         Long id = 1L;
         var expected = new Category(id, "Pizzas", true, new HashSet<>());
@@ -182,6 +111,20 @@ class CategoryServiceTest {
     }
 
     @Test
+    void createCategory_preservesAnExplicitActiveFlag() {
+        var inputCategory = new Category(5L, "Archived Salads", false, new HashSet<>());
+
+        when(repository.save(inputCategory)).thenReturn(inputCategory);
+
+        var result = service.createCategory(inputCategory);
+
+        assertNull(result.getId());
+        assertFalse(result.getIsActive());
+        verify(repository).save(inputCategory);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
     void softDeleteCategoryById() {
         Long id = 1L;
         var existingCategory = new Category(id, "Pizzas", true, new HashSet<>());
@@ -217,6 +160,28 @@ class CategoryServiceTest {
 
         verify(repository).findById(id);
         verify(repository).save(existingCategory);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void findByIdOrThrow_withExistingCategory() {
+        var category = new Category(1L, "Pizzas", true, new HashSet<>());
+        when(repository.findById(1L)).thenReturn(Optional.of(category));
+
+        assertEquals(category, service.findByIdOrThrow(1L));
+
+        verify(repository).findById(1L);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void findByIdOrThrow_withMissingCategory_throws() {
+        when(repository.findById(4L)).thenReturn(Optional.empty());
+
+        var exception = assertThrows(ResourceNotFoundException.class, () -> service.findByIdOrThrow(4L));
+
+        assertEquals("Category 4 not found", exception.getMessage());
+        verify(repository).findById(4L);
         verifyNoMoreInteractions(repository);
     }
 }

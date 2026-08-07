@@ -6,7 +6,6 @@ import io.everyonecodes.order_api.repository.CategoryRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class CategoryService {
@@ -26,21 +25,9 @@ public class CategoryService {
         return repository.findByIdAndIsActiveTrue(id).orElseThrow(() -> new ResourceNotFoundException("Category " + id + " not found"));
     }
 
-    // private/admin methods (for later)
+    // private/admin methods
     public List<Category> findAll() {
         return repository.findAll();
-    }
-
-    public Optional<Category> findById(Long id) {
-        return repository.findById(id);
-    }
-
-    public Category save(Category category) {
-        return repository.save(category);
-    }
-
-    public void deleteById(Long id) {
-        repository.deleteById(id);
     }
 
     public Category createCategory(Category category) {
@@ -50,19 +37,19 @@ public class CategoryService {
     }
 
     public Category updateCategory(Category category, Long id) {
-        Category existingCategory = getByIdOrThrow( id);
+        Category existingCategory = findByIdOrThrow( id);
         existingCategory.setName(category.getName());
         existingCategory.setIsActive(category.getIsActive());
         return repository.save(existingCategory);
     }
 
     public void softDeleteCategoryById(Long id) {
-        Category category = getByIdOrThrow(id);
+        Category category = findByIdOrThrow(id);
         category.setIsActive(false);
         repository.save(category);
     }
 
-    public Category getByIdOrThrow(Long categoryId) {
+    public Category findByIdOrThrow(Long categoryId) {
         return repository.findById(categoryId).orElseThrow(() -> new ResourceNotFoundException("Category " + categoryId + " not found"));
     }
 }
