@@ -304,7 +304,7 @@ class OrderControllerTest {
                     .returnResult()
                     .getResponseBody();
 
-            assertEquals("Menu item not found: " + nonExistentMenuItemId, result);
+            assertEquals("MenuItem " + nonExistentMenuItemId + " not found", result);
         }
 
         @Test

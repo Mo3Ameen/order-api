@@ -178,7 +178,7 @@ class OrderServiceTest {
         menuItem.setIsActive(false);
 
         when(orderRepository.findById(1L)).thenReturn(Optional.ofNullable(order));
-        when(menuItemService.findById(10L)).thenReturn(Optional.of(menuItem));
+        when(menuItemService.findByIdOrThrow(10L)).thenReturn(menuItem);
 
         var exception = assertThrows(InvalidOrderRequestException.class, () -> orderService.addItemToOrder(1L, 10L, 1, null));
 
@@ -189,11 +189,12 @@ class OrderServiceTest {
 
     @Test
     void addItemToOrder_throwsWhenMenuItemIsNotFound() {
-        when(orderRepository.findById(1L)).thenReturn(Optional.ofNullable(order));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(menuItemService.findByIdOrThrow(10L)).thenThrow(new ResourceNotFoundException("MenuItem 10 not found"));
 
         var exception = assertThrows(ResourceNotFoundException.class, () -> orderService.addItemToOrder(1L, 10L, 1, null));
 
-        String expectedMessage = "Menu item not found: " + menuItem.getId();
+        String expectedMessage = "MenuItem " + menuItem.getId() + " not found";
 
         assertEquals(expectedMessage, exception.getMessage());
 
@@ -202,7 +203,7 @@ class OrderServiceTest {
     @Test
     void addItemToOrder_throwsWhenExtraIsNotFoundAndExtrasListsSizesMismatch() {
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
-        when(menuItemService.findById(10L)).thenReturn(Optional.of(menuItem));
+        when(menuItemService.findByIdOrThrow(10L)).thenReturn(menuItem);
 
         var exception = assertThrows(ResourceNotFoundException.class, () -> orderService.addItemToOrder(1L, 10L, 1, Set.of(5L)));
 
@@ -214,7 +215,7 @@ class OrderServiceTest {
     @Test
     void addItemToOrder_throwsWhenExtraIsNotIsNotValidForItemOrNotActive() {
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
-        when(menuItemService.findById(10L)).thenReturn(Optional.of(menuItem));
+        when(menuItemService.findByIdOrThrow(10L)).thenReturn(menuItem);
 
         Extra activeExtra = new Extra();
         activeExtra.setId(1L);
@@ -260,7 +261,7 @@ class OrderServiceTest {
     @Test
     void addItemToOrder_passesWhenAllGoodWithExtras() {
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
-        when(menuItemService.findById(10L)).thenReturn(Optional.of(menuItem));
+        when(menuItemService.findByIdOrThrow(10L)).thenReturn(menuItem);
         Extra extra = new Extra();
         extra.setIsActive(true);
         extra.setId(5L);
@@ -278,9 +279,34 @@ class OrderServiceTest {
     }
 
     @Test
+    void addItemToOrder_throwsWhenExtraIsNotValidForThisItem() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(menuItemService.findByIdOrThrow(10L)).thenReturn(menuItem);
+
+        Extra extra = new Extra();
+        extra.setId(5L);
+        extra.setIsActive(true);
+
+        menuItem.setExtras(new HashSet<>());
+
+        when(extraService.findAllById(Set.of(5L)))
+                .thenReturn(List.of(extra));
+
+        var exception = assertThrows(
+                InvalidOrderRequestException.class,
+                () -> orderService.addItemToOrder(1L, 10L, 1, Set.of(5L))
+        );
+
+        assertEquals(
+                "Extra 5 is not valid for this item or is not active.",
+                exception.getMessage()
+        );
+    }
+
+    @Test
     void addItemToOrder_passesWhenAllGoodWithoutExtras() {
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
-        when(menuItemService.findById(10L)).thenReturn(Optional.of(menuItem));
+        when(menuItemService.findByIdOrThrow(10L)).thenReturn(menuItem);
 
         orderService.addItemToOrder(1L, 10L, 1, null);
 
@@ -397,6 +423,23 @@ class OrderServiceTest {
     }
 
     @Test
+    void payOrder_throwsWhenEmailIsBlank() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        order.getOrderedItems().add(new OrderedItem());
+
+        var ex = assertThrows(
+                InvalidOrderRequestException.class,
+                () -> orderService.payOrder(1L, "")
+        );
+
+        assertEquals(
+                "Customer email is required to complete payment.",
+                ex.getMessage()
+        );
+    }
+
+    @Test
     void updateQuantity_throwsWhenOrderIsNotFound() {
         var ex = assertThrows(ResourceNotFoundException.class, () -> orderService.updateQuantity(1L, 10L, 5));
 
@@ -444,6 +487,22 @@ class OrderServiceTest {
 
         assertEquals(expectedMessage, exceptionWithNull.getMessage());
         assertEquals(expectedMessage, exceptionWithZero.getMessage());
+    }
+
+    @Test
+    void updateQuantity_treatsMissingPriceAndExtrasAsZero() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        var item = new OrderedItem();
+        item.setId(10L);
+        item.setQuantity(1);
+        item.setPriceAtPurchase(null);
+        item.setSelectedExtras(null);
+        order.getOrderedItems().add(item);
+
+        orderService.updateQuantity(1L, 10L, 2);
+
+        assertEquals(BigDecimal.ZERO, order.getTotalPrice());
+        verify(orderRepository).save(order);
     }
 
     @Test
@@ -576,13 +635,12 @@ class OrderServiceTest {
     @Test
     void addExtraOnOrderedItemToOrder_throwsWhenExtraIsNotFound() {
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(extraService.findExtraByIdOrThrow(5L)).thenThrow(new ResourceNotFoundException("Extra " + 5L + " not found"));
 
         var orderedItem = new OrderedItem();
         orderedItem.setId(10L);
         orderedItem.setMenuItem(menuItem);
         order.getOrderedItems().add(orderedItem);
-
-        when(extraService.findById(5L)).thenReturn(Optional.empty());
 
         var ex = assertThrows(ResourceNotFoundException.class, () -> orderService.addExtraOnOrderedItemToOrder(1L, 10L, 5L));
 
@@ -603,7 +661,7 @@ class OrderServiceTest {
         var extra = new Extra();
         extra.setId(5L);
         extra.setIsActive(false);
-        when(extraService.findById(5L)).thenReturn(Optional.of(extra));
+        when(extraService.findExtraByIdOrThrow(5L)).thenReturn(extra);
 
         var ex = assertThrows(InvalidOrderRequestException.class, () -> orderService.addExtraOnOrderedItemToOrder(1L, 10L, 5L));
 
@@ -624,7 +682,7 @@ class OrderServiceTest {
         var extra = new Extra();
         extra.setId(5L);
         extra.setIsActive(true);
-        when(extraService.findById(5L)).thenReturn(Optional.of(extra));
+        when(extraService.findExtraByIdOrThrow(5L)).thenReturn(extra);
 
         var ex = assertThrows(InvalidOrderRequestException.class, () -> orderService.addExtraOnOrderedItemToOrder(1L, 10L, 5L));
 
@@ -652,7 +710,7 @@ class OrderServiceTest {
 
         order.getOrderedItems().add(orderedItem);
 
-        when(extraService.findById(5L)).thenReturn(Optional.of(extra));
+        when(extraService.findExtraByIdOrThrow(5L)).thenReturn(extra);
 
         var ex = assertThrows(InvalidOrderRequestException.class, () -> orderService.addExtraOnOrderedItemToOrder(1L, 10L, 5L));
 
@@ -679,7 +737,7 @@ class OrderServiceTest {
 
         order.getOrderedItems().add(orderedItem);
 
-        when(extraService.findById(5L)).thenReturn(Optional.of(extra));
+        when(extraService.findExtraByIdOrThrow(5L)).thenReturn(extra);
 
         orderService.addExtraOnOrderedItemToOrder(1L, 10L, 5L);
 
@@ -690,5 +748,104 @@ class OrderServiceTest {
 
         assertEquals(1, savedItem.getSelectedExtras().size());
         assertEquals(BigDecimal.valueOf(12), order.getTotalPrice());
+    }
+
+    @Test
+    void addExtraOnOrderedItemToOrder_allowsADifferentExistingExtra() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        var requestedExtra = new Extra();
+        requestedExtra.setId(5L);
+        requestedExtra.setIsActive(true);
+        requestedExtra.setPrice(BigDecimal.valueOf(2));
+
+        var existingExtra = new Extra();
+        existingExtra.setId(6L);
+        existingExtra.setIsActive(true);
+        existingExtra.setPrice(BigDecimal.ONE);
+
+        menuItem.setExtras(Set.of(requestedExtra, existingExtra));
+        var item = new OrderedItem();
+        item.setId(10L);
+        item.setMenuItem(menuItem);
+        item.setQuantity(1);
+        item.setPriceAtPurchase(BigDecimal.TEN);
+        var selectedExistingExtra = new SelectedExtra();
+        selectedExistingExtra.setExtra(existingExtra);
+        selectedExistingExtra.setPriceAtPurchase(BigDecimal.ONE);
+        item.setSelectedExtras(new HashSet<>(Set.of(selectedExistingExtra)));
+        order.getOrderedItems().add(item);
+        when(extraService.findExtraByIdOrThrow(5L)).thenReturn(requestedExtra);
+
+        orderService.addExtraOnOrderedItemToOrder(1L, 10L, 5L);
+
+        assertEquals(2, item.getSelectedExtras().size());
+        assertEquals(BigDecimal.valueOf(13), order.getTotalPrice());
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    void calculateTotalPrice_returnsZeroWhenOrderItemsAreNull() throws Exception {
+        var orderWithNoItems = new Order();
+        orderWithNoItems.setOrderedItems(null);
+        var method = OrderService.class.getDeclaredMethod("calculateTotalPrice", Order.class);
+        method.setAccessible(true);
+
+        assertEquals(BigDecimal.ZERO, method.invoke(orderService, orderWithNoItems));
+    }
+
+    @Test
+    void calculateTotalPrice_treatsNullExtraPriceAsZero() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        var item = new OrderedItem();
+        item.setId(10L);
+        item.setQuantity(2);
+        item.setPriceAtPurchase(BigDecimal.TEN);
+
+        var selectedExtra = new SelectedExtra();
+        selectedExtra.setPriceAtPurchase(null);
+
+        item.setSelectedExtras(new HashSet<>(Set.of(selectedExtra)));
+
+        order.getOrderedItems().add(item);
+
+        orderService.updateQuantity(1L, 10L, 2);
+
+        // (10 + 0) * 2
+        assertEquals(BigDecimal.valueOf(20), order.getTotalPrice());
+
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    void findByIdOrThrow_withExistingOrder() {
+        Long id = 1L;
+
+        when(orderRepository.findById(id)).thenReturn(Optional.of(order));
+
+        var result = orderService.findByIdOrThrow(id);
+
+        assertEquals(order, result);
+
+        verify(orderRepository).findById(id);
+        verifyNoMoreInteractions(orderRepository);
+    }
+
+    @Test
+    void findByIdOrThrow_withNonExistingOrder() {
+        Long id = 1L;
+
+        when(orderRepository.findById(id)).thenReturn(Optional.empty());
+
+        var exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> orderService.findByIdOrThrow(id)
+        );
+
+        assertEquals("Order " + id + " not found", exception.getMessage());
+
+        verify(orderRepository).findById(id);
+        verifyNoMoreInteractions(orderRepository);
     }
 }

@@ -57,7 +57,7 @@ public class OrderService {
 
         Order order = getValidOrder(orderId);
 
-        MenuItem menuItem = menuItemService.findById(menuItemId).orElseThrow(() -> new ResourceNotFoundException("Menu item not found: " + menuItemId));
+        MenuItem menuItem = menuItemService.findByIdOrThrow(menuItemId);
 
         if (!menuItem.getIsActive()) {
             throw new InvalidOrderRequestException("Menu item not active: " + menuItemId);
@@ -170,7 +170,7 @@ public class OrderService {
 
         OrderedItem item = getOrderedItemFromOrder(order, orderedItemId);
 
-        Extra extra = extraService.findById(extraId).orElseThrow(() -> new ResourceNotFoundException("Extra "+ extraId + " not found"));
+        Extra extra = extraService.findExtraByIdOrThrow(extraId);
 
         if (!extra.getIsActive()) {
             throw new InvalidOrderRequestException("Extra " + extraId + " is not active");
