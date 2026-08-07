@@ -7,7 +7,6 @@ import io.everyonecodes.order_api.repository.ExtraRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -27,40 +26,28 @@ public class ExtraService {
         return repository.findAll();
     }
 
-    public Optional<Extra> findById(Long id) {
-        return repository.findById(id);
-    }
-
-    public Extra save(Extra extra) {
-        return repository.save(extra);
-    }
-
     public Extra updateExtra(Extra extra, Long id) {
-        Extra existingExtra = getExtra(id);
+        Extra existingExtra = findExtraByIdOrThrow(id);
         existingExtra.setName(extra.getName());
         existingExtra.setIsActive(extra.getIsActive());
         existingExtra.setPrice(extra.getPrice());
-        return save(existingExtra);
+        return repository.save(existingExtra);
     }
 
     public Extra createExtra(Extra extra) {
         extra.setId(null);
         extra.setIsActive(extra.getIsActive() != null ? extra.getIsActive() : true);
-        return save(extra);
-    }
-
-    public void deleteById(Long id) {
-        repository.deleteById(id);
+        return repository.save(extra);
     }
 
     public void softDeleteById(Long id) {
-        Extra extra = getExtra(id);
+        Extra extra = findExtraByIdOrThrow(id);
         extra.setIsActive(false);
-        save(extra);
+        repository.save(extra);
     }
 
-    private Extra getExtra(Long id) {
-        return findById(id).orElseThrow(() -> new ResourceNotFoundException("Extra " + id + " not found"));
+    public Extra findExtraByIdOrThrow(Long id) {
+        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Extra " + id + " not found"));
     }
 
     public List<Extra> findAllById(Set<Long> extraIds) {

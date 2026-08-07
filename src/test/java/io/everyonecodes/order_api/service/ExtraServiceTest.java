@@ -2,6 +2,7 @@ package io.everyonecodes.order_api.service;
 
 import io.everyonecodes.order_api.entity.Extra;
 import io.everyonecodes.order_api.entity.MenuItem;
+import io.everyonecodes.order_api.exception.ResourceNotFoundException;
 import io.everyonecodes.order_api.repository.ExtraRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,8 +13,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -74,76 +75,6 @@ class ExtraServiceTest {
     }
 
     @Test
-    void findById_withExistingExtra() {
-        Long id = 1L;
-        var expected = new Extra(1L, "Extra Cheese", BigDecimal.valueOf(2), true, new HashSet<>());
-
-        when(repository.findById(id)).thenReturn(Optional.of(expected));
-
-        var result = service.findById(id);
-
-        assertTrue(result.isPresent());
-        assertEquals(expected, result.get());
-
-        verify(repository).findById(id);
-        verifyNoMoreInteractions(repository);
-    }
-
-    @Test
-    void findById_withNonExistingExtra() {
-        Long id = 4L;
-        Optional<Extra> expected = Optional.empty();
-
-        when(repository.findById(id)).thenReturn(expected);
-
-        var result = service.findById(id);
-
-        assertFalse(result.isPresent());
-
-        verify(repository).findById(id);
-        verifyNoMoreInteractions(repository);
-    }
-
-    @Test
-    void save_newExtra() {
-        var newEntity = new Extra();
-        var expected = new Extra();
-
-        when(repository.save(newEntity)).thenReturn(expected);
-
-        var result = service.save(newEntity);
-
-        assertEquals(expected, result);
-
-        verify(repository).save(newEntity);
-        verifyNoMoreInteractions(repository);
-    }
-
-    @Test
-    void save_existingExtra() {
-        var existingEntity = new Extra();
-        existingEntity.setId(1L);
-
-        when(repository.save(existingEntity)).thenReturn(existingEntity);
-
-        var result = service.save(existingEntity);
-
-        assertEquals(existingEntity, result);
-
-        verify(repository).save(existingEntity);
-        verifyNoMoreInteractions(repository);
-    }
-
-    @Test
-    void deleteById() {
-        Long id = 3L;
-        service.deleteById(id);
-
-        verify(repository).deleteById(id);
-        verifyNoMoreInteractions(repository);
-    }
-
-    @Test
     void findAllById_passingCase() {
         Set<Long> ids = Set.of(1L, 3L);
 
@@ -179,6 +110,77 @@ class ExtraServiceTest {
         assertNotEquals(ids.size(), result.size());
 
         verify(repository).findAllById(ids);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void createExtra_resetsIdAndDefaultsToActive() {
+        var extra = new Extra(5L, "Olives", BigDecimal.ONE, null, new HashSet<>());
+        when(repository.save(extra)).thenReturn(extra);
+
+        var result = service.createExtra(extra);
+
+        assertNull(result.getId());
+        assertTrue(result.getIsActive());
+        verify(repository).save(extra);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void createExtra_preservesAnExplicitInactiveFlag() {
+        var extra = new Extra(5L, "Archived Olives", BigDecimal.ONE, false, new HashSet<>());
+        when(repository.save(extra)).thenReturn(extra);
+
+        var result = service.createExtra(extra);
+
+        assertNull(result.getId());
+        assertFalse(result.getIsActive());
+        verify(repository).save(extra);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void updateExtra_updatesEveryMutableField() {
+        var existing = new Extra(1L, "Cheese", BigDecimal.ONE, true, new HashSet<>());
+        var update = new Extra(null, "Bacon", BigDecimal.valueOf(2), false, new HashSet<>());
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.save(existing)).thenReturn(existing);
+
+        var result = service.updateExtra(update, 1L);
+
+        assertEquals("Bacon", result.getName());
+        assertEquals(BigDecimal.valueOf(2), result.getPrice());
+        assertFalse(result.getIsActive());
+        verify(repository).findById(1L);
+        verify(repository).save(existing);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void softDeleteById_marksExtraInactive() {
+        var extra = new Extra(1L, "Cheese", BigDecimal.ONE, true, new HashSet<>());
+        when(repository.findById(1L)).thenReturn(Optional.of(extra));
+
+        service.softDeleteById(1L);
+
+        assertFalse(extra.getIsActive());
+        verify(repository).findById(1L);
+        verify(repository).save(extra);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void findExtraByIdOrThrow_returnsExtraOrThrows() {
+        var extra = new Extra(1L, "Cheese", BigDecimal.ONE, true, new HashSet<>());
+        when(repository.findById(1L)).thenReturn(Optional.of(extra));
+        when(repository.findById(2L)).thenReturn(Optional.empty());
+
+        assertEquals(extra, service.findExtraByIdOrThrow(1L));
+        var exception = assertThrows(ResourceNotFoundException.class, () -> service.findExtraByIdOrThrow(2L));
+        assertEquals("Extra 2 not found", exception.getMessage());
+
+        verify(repository).findById(1L);
+        verify(repository).findById(2L);
         verifyNoMoreInteractions(repository);
     }
 }
