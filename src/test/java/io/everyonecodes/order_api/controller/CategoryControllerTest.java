@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,7 +64,7 @@ class CategoryControllerTest {
     // ---------- GET /api/categories/{id} ----------
 
     @Test
-    void getCategoryById_returnsCategory_whenActiveCategoryExists() {
+    void getCategoryById_returnsCategory_whenActiveActiveCategoryExists() {
         var result = restTestClient.get()
                 .uri("/api/categories/{id}", activeCategory.getId())
                 .exchange()
@@ -78,7 +79,7 @@ class CategoryControllerTest {
     }
 
     @Test
-    void getCategoryById_returns404_whenCategoryIsInactive() {
+    void getCategoryById_returns404_whenActiveCategoryIsInactive() {
         var result = restTestClient.get()
                 .uri("/api/categories/{id}", inactiveCategory.getId())
                 .exchange()
@@ -91,7 +92,7 @@ class CategoryControllerTest {
     }
 
     @Test
-    void getCategoryById_returns404_whenCategoryDoesNotExist() {
+    void getCategoryById_returns404_whenActiveCategoryDoesNotExist() {
         Long nonExistentId = 999999L;
 
         var result = restTestClient.get()
@@ -103,5 +104,78 @@ class CategoryControllerTest {
                 .getResponseBody();
 
         assertEquals("Category " + nonExistentId + " not found", result);
+    }
+
+    @Test
+    void adminEndpoints_returnAllCategoriesAndCategoriesById() {
+        var allCategories = restTestClient.get()
+                .uri("/api/categories/all")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Category[].class)
+                .returnResult().getResponseBody();
+
+        var category = restTestClient.get()
+                .uri("/api/categories/all/{id}", inactiveCategory.getId())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Category.class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(allCategories);
+        assertTrue(Stream.of(allCategories).anyMatch(candidate -> candidate.getId().equals(activeCategory.getId())));
+        assertTrue(Stream.of(allCategories).anyMatch(candidate -> candidate.getId().equals(inactiveCategory.getId())));
+        assertNotNull(category);
+        assertEquals(inactiveCategory.getId(), category.getId());
+    }
+
+    @Test
+    void postCategory_createsAnActiveCategoryByDefault() {
+        var request = new Category();
+        request.setName("Salads");
+
+        var result = restTestClient.post()
+                .uri("/api/categories")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(Category.class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(result);
+        assertNotNull(result.getId());
+        assertEquals("Salads", result.getName());
+        assertTrue(result.getIsActive());
+    }
+
+    @Test
+    void putCategory_updatesTheCategory() {
+        var request = new Category();
+        request.setName("Updated Burgers");
+        request.setIsActive(false);
+
+        var result = restTestClient.put()
+                .uri("/api/categories/{id}", activeCategory.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Category.class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(result);
+        assertEquals("Updated Burgers", result.getName());
+        assertFalse(result.getIsActive());
+    }
+
+    @Test
+    void deleteCategory_softDeletesTheCategory() {
+        restTestClient.delete()
+                .uri("/api/categories/{id}", activeCategory.getId())
+                .exchange()
+                .expectStatus().isNoContent();
+
+        assertFalse(categoryRepository.findById(activeCategory.getId()).orElseThrow().getIsActive());
     }
 }

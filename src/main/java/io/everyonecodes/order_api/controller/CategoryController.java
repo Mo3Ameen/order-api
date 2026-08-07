@@ -17,15 +17,47 @@ public class CategoryController {
         this.service = service;
     }
 
+    // ---------- Public requests for all Users ----------
+
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    public List<Category> getCategories() {
+    public List<Category> getActiveCategories() {
         return service.findAllActive();
     }
 
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public Category getCategoryById(@PathVariable Long id) {
+    public Category getActiveCategoryById(@PathVariable Long id) {
         return service.getByIdAndIsActiveOrThrow(id);
+    }
+
+    // ---------- Private requests for only Admins ----------
+
+    @GetMapping("/all")
+    public List<Category> getAllCategories() {
+        return service.findAll();
+    }
+
+    @GetMapping("/all/{id}")
+    public Category getCategory(@PathVariable Long id) {
+        return service.findByIdOrThrow(id);
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public Category postCategory(@RequestBody Category category) {
+        return service.createCategory(category);
+    }
+
+    @PutMapping("/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public Category putCategory(@RequestBody Category category, @PathVariable Long id) {
+        return service.updateCategory(category, id);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteCategory(@PathVariable Long id) {
+        service.softDeleteCategoryById(id);
     }
 }
