@@ -1,6 +1,7 @@
 package io.everyonecodes.order_api.controller;
 
 import io.everyonecodes.order_api.dto.AddItemRequestDto;
+import io.everyonecodes.order_api.dto.KitchenTicketDto;
 import io.everyonecodes.order_api.entity.*;
 import io.everyonecodes.order_api.repository.CategoryRepository;
 import io.everyonecodes.order_api.repository.ExtraRepository;
@@ -21,7 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -109,6 +112,7 @@ class OrderControllerTest {
         order.setCreatedAt(LocalDateTime.now());
         order.setTotalPrice(BigDecimal.ZERO);
         order.setIsPaid(isPaid);
+        order.setIsFulfilled(false);
         order.setOrderedItems(new HashSet<>());
         return orderRepository.save(order);
     }
@@ -117,6 +121,7 @@ class OrderControllerTest {
         var order = new Order();
         order.setCreatedAt(LocalDateTime.now());
         order.setIsPaid(false);
+        order.setIsFulfilled(false);
         order.setOrderedItems(new HashSet<>());
 
         var item = new OrderedItem();
@@ -136,6 +141,7 @@ class OrderControllerTest {
         var order = new Order();
         order.setCreatedAt(LocalDateTime.now());
         order.setIsPaid(false);
+        order.setIsFulfilled(false);
         order.setOrderedItems(new HashSet<>());
 
         var item = new OrderedItem();
@@ -198,6 +204,146 @@ class OrderControllerTest {
                     .getResponseBody();
 
             assertEquals("Order " + nonExistentId + " not found", result);
+        }
+    }
+
+    // ---------- GET /api/orders/kitchen ----------
+
+    @Nested
+    class FindAllPaidUnfulfilled {
+
+        @Test
+        void returnsOnlyPaidAndUnfulfilledOrders() {
+            var paidUnfulfilled = createOrderWithItem();
+            paidUnfulfilled.setIsPaid(true);
+            paidUnfulfilled = orderRepository.save(paidUnfulfilled);
+
+            var unpaid = createOrderWithItem();
+
+            var paidAndFulfilled = createOrderWithItem();
+            paidAndFulfilled.setIsPaid(true);
+            paidAndFulfilled.setIsFulfilled(true);
+            paidAndFulfilled = orderRepository.save(paidAndFulfilled);
+
+            var result = getKitchenOrders()
+                    .expectStatus().isOk()
+                    .expectBody(KitchenTicketDto[].class)
+                    .returnResult()
+                    .getResponseBody();
+
+            assertNotNull(result);
+            var ids = Stream.of(result).map(KitchenTicketDto::getOrderId).toList();
+
+            assertTrue(ids.contains(paidUnfulfilled.getId()));
+            assertFalse(ids.contains(unpaid.getId()));
+            assertFalse(ids.contains(paidAndFulfilled.getId()));
+        }
+
+        @Test
+        void mapsOrderedItemsAndExtrasCorrectly() {
+            var order = createOrderWithItemAndExtra();
+            order.setIsPaid(true);
+            order = orderRepository.save(order);
+
+            var result = getKitchenOrders()
+                    .expectStatus().isOk()
+                    .expectBody(KitchenTicketDto[].class)
+                    .returnResult()
+                    .getResponseBody();
+
+            assertNotNull(result);
+            var savedOrderId = order.getId();
+            var ticket = Stream.of(result)
+                    .filter(candidate -> candidate.getOrderId().equals(savedOrderId))
+                    .findFirst()
+                    .orElseThrow();
+
+            assertEquals(1, ticket.getItems().size());
+            var itemDto = ticket.getItems().getFirst();
+            assertEquals(activeMenuItem.getName(), itemDto.getItemName());
+            assertEquals(1, itemDto.getQuantity());
+            assertEquals(List.of(activeExtra.getName()), itemDto.getExtraNames());
+        }
+
+        private RestTestClient.ResponseSpec getKitchenOrders() {
+            return restTestClient.get()
+                    .uri("/api/orders/kitchen")
+                    .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                    .exchange();
+        }
+    }
+
+    // ---------- PUT /api/orders/{orderId}/fulfill ----------
+
+    @Nested
+    class MarkFulfilled {
+
+        @Test
+        void returns404_whenOrderDoesNotExist() {
+            Long nonExistentOrderId = 999999L;
+
+            var result = fulfill(nonExistentOrderId)
+                    .expectStatus()
+                    .isNotFound()
+                    .expectBody(String.class)
+                    .returnResult()
+                    .getResponseBody();
+
+            assertEquals("Order " + nonExistentOrderId + " not found", result);
+        }
+
+        @Test
+        void returns400_whenOrderIsNotPaid() {
+            var order = createOrder(false);
+
+            var result = fulfill(order.getId())
+                    .expectStatus()
+                    .isBadRequest()
+                    .expectBody(String.class)
+                    .returnResult()
+                    .getResponseBody();
+
+            assertEquals("Order " + order.getId() + " is not paid yet.", result);
+        }
+
+        @Test
+        void passesWhenOrderIsPaidAndUnfulfilled() {
+            var order = createOrder(true);
+
+            var result = fulfill(order.getId())
+                    .expectStatus()
+                    .isOk()
+                    .expectBody(Order.class)
+                    .returnResult()
+                    .getResponseBody();
+
+            assertNotNull(result);
+            assertTrue(result.getIsFulfilled());
+        }
+
+        @Test
+        void isIdempotent_whenOrderIsAlreadyFulfilled() {
+            var order = createOrder(true);
+
+            fulfill(order.getId()).expectStatus().isOk();
+
+            var result = fulfill(order.getId())
+                    .expectStatus()
+                    .isOk()
+                    .expectBody(Order.class)
+                    .returnResult()
+                    .getResponseBody();
+
+            assertNotNull(result);
+            assertTrue(result.getIsFulfilled());
+        }
+
+        private RestTestClient.ResponseSpec fulfill(Long orderId) {
+            return restTestClient
+                    .put()
+                    .uri("/api/orders/{orderId}/fulfill", orderId)
+                    .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                    .exchange();
         }
     }
 

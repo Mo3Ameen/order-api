@@ -56,9 +56,9 @@ class OrderServiceTest {
     @Test
     void findAll() {
         List<Order> orders = List.of(
-                new Order(1L, LocalDateTime.now(), BigDecimal.valueOf(20), false, "", new HashSet<>()),
-                new Order(2L, LocalDateTime.now().minusDays(3), BigDecimal.valueOf(30), true, "", new HashSet<>()),
-                new Order(3L, LocalDateTime.now().minusDays(15), BigDecimal.valueOf(10), false, "", new HashSet<>())
+                new Order(1L, LocalDateTime.now(), BigDecimal.valueOf(20), false, false, "", new HashSet<>()),
+                new Order(2L, LocalDateTime.now().minusDays(3), BigDecimal.valueOf(30), true, false, "", new HashSet<>()),
+                new Order(3L, LocalDateTime.now().minusDays(15), BigDecimal.valueOf(10), false, false, "", new HashSet<>())
         );
 
         when(orderRepository.findAll()).thenReturn(orders);
@@ -66,9 +66,9 @@ class OrderServiceTest {
         var result = orderService.findAll();
 
         List<Order> expected = List.of(
-                new Order(1L, LocalDateTime.now(), BigDecimal.valueOf(20), false, "", new HashSet<>()),
-                new Order(2L, LocalDateTime.now().minusDays(3), BigDecimal.valueOf(30), true, "", new HashSet<>()),
-                new Order(3L, LocalDateTime.now().minusDays(15), BigDecimal.valueOf(10), false, "", new HashSet<>())
+                new Order(1L, LocalDateTime.now(), BigDecimal.valueOf(20), false, false, "", new HashSet<>()),
+                new Order(2L, LocalDateTime.now().minusDays(3), BigDecimal.valueOf(30), true, false, "", new HashSet<>()),
+                new Order(3L, LocalDateTime.now().minusDays(15), BigDecimal.valueOf(10), false, false, "", new HashSet<>())
         );
 
         assertEquals(expected, result);
@@ -80,7 +80,7 @@ class OrderServiceTest {
     @Test
     void findById_withExistingOrder() {
         Long id = 1L;
-        var expected = new Order(3L, LocalDateTime.now().minusDays(15), BigDecimal.valueOf(10), false, "", new HashSet<>());
+        var expected = new Order(3L, LocalDateTime.now().minusDays(15), BigDecimal.valueOf(10), false, false, "", new HashSet<>());
 
         when(orderRepository.findById(id)).thenReturn(Optional.of(expected));
 
@@ -847,5 +847,114 @@ class OrderServiceTest {
 
         verify(orderRepository).findById(id);
         verifyNoMoreInteractions(orderRepository);
+    }
+
+    @Test
+    void findAllPaidUnfulfilledOrders_mapsOrdersToKitchenTicketDto() {
+        order.setIsPaid(true);
+        order.setIsFulfilled(false);
+        order.setCreatedAt(LocalDateTime.now());
+
+        menuItem.setName("Cheeseburger");
+
+        var extra = new Extra();
+        extra.setName("Bacon");
+        var selectedExtra = new SelectedExtra();
+        selectedExtra.setExtra(extra);
+
+        var orderedItem = new OrderedItem();
+        orderedItem.setMenuItem(menuItem);
+        orderedItem.setQuantity(2);
+        orderedItem.setSelectedExtras(new HashSet<>(Set.of(selectedExtra)));
+
+        order.getOrderedItems().add(orderedItem);
+
+        when(orderRepository.findByIsPaidTrueAndIsFulfilledFalse()).thenReturn(List.of(order));
+
+        var result = orderService.findAllPaidUnfulfilledOrders();
+
+        assertEquals(1, result.size());
+
+        var ticket = result.getFirst();
+        assertEquals(order.getId(), ticket.getOrderId());
+        assertEquals(order.getCreatedAt(), ticket.getCreatedAt());
+        assertEquals(1, ticket.getItems().size());
+
+        var itemDto = ticket.getItems().getFirst();
+        assertEquals("Cheeseburger", itemDto.getItemName());
+        assertEquals(2, itemDto.getQuantity());
+        assertEquals(List.of("Bacon"), itemDto.getExtraNames());
+
+        verify(orderRepository).findByIsPaidTrueAndIsFulfilledFalse();
+        verifyNoMoreInteractions(orderRepository);
+    }
+
+    @Test
+    void findAllPaidUnfulfilledOrders_sortsOldestFirst() {
+        var olderOrder = new Order(1L, LocalDateTime.now().minusDays(2), BigDecimal.ZERO, true, false, "", new HashSet<>());
+        var newerOrder = new Order(2L, LocalDateTime.now(), BigDecimal.ZERO, true, false, "", new HashSet<>());
+
+        when(orderRepository.findByIsPaidTrueAndIsFulfilledFalse()).thenReturn(List.of(newerOrder, olderOrder));
+
+        var result = orderService.findAllPaidUnfulfilledOrders();
+
+        assertEquals(2, result.size());
+        assertEquals(olderOrder.getId(), result.get(0).getOrderId());
+        assertEquals(newerOrder.getId(), result.get(1).getOrderId());
+
+        verify(orderRepository).findByIsPaidTrueAndIsFulfilledFalse();
+        verifyNoMoreInteractions(orderRepository);
+    }
+
+    @Test
+    void markFulfilled_throwsWhenOrderIsNotFound() {
+        var ex = assertThrows(ResourceNotFoundException.class, () -> orderService.markFulfilled(1L));
+
+        String expectedMessage = "Order " + 1L + " not found";
+
+        assertEquals(expectedMessage, ex.getMessage());
+    }
+
+    @Test
+    void markFulfilled_throwsWhenOrderIsNotPaid() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        order.setIsPaid(false);
+
+        var ex = assertThrows(InvalidOrderRequestException.class, () -> orderService.markFulfilled(1L));
+
+        String expectedMessage = "Order " + order.getId() + " is not paid yet.";
+
+        assertEquals(expectedMessage, ex.getMessage());
+
+        verify(orderRepository).findById(1L);
+        verifyNoMoreInteractions(orderRepository);
+    }
+
+    @Test
+    void markFulfilled_setsFulfilledWhenOrderIsPaidAndNotYetFulfilled() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        order.setIsPaid(true);
+        order.setIsFulfilled(false);
+
+        orderService.markFulfilled(1L);
+
+        verify(orderRepository, times(1)).save(order);
+        verifyNoMoreInteractions(orderRepository);
+
+        assertTrue(order.getIsFulfilled());
+    }
+
+    @Test
+    void markFulfilled_isIdempotent_whenOrderIsAlreadyFulfilled() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        order.setIsPaid(true);
+        order.setIsFulfilled(true);
+
+        orderService.markFulfilled(1L);
+
+        verify(orderRepository, times(1)).save(order);
+        verifyNoMoreInteractions(orderRepository);
+
+        assertTrue(order.getIsFulfilled());
     }
 }
