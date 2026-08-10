@@ -110,6 +110,7 @@ class CategoryControllerTest {
     void adminEndpoints_returnAllCategoriesAndCategoriesById() {
         var allCategories = restTestClient.get()
                 .uri("/api/categories/all")
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(Category[].class)
@@ -117,6 +118,7 @@ class CategoryControllerTest {
 
         var category = restTestClient.get()
                 .uri("/api/categories/all/{id}", inactiveCategory.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(Category.class)
@@ -136,6 +138,7 @@ class CategoryControllerTest {
 
         var result = restTestClient.post()
                 .uri("/api/categories")
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(request)
                 .exchange()
@@ -157,6 +160,7 @@ class CategoryControllerTest {
 
         var result = restTestClient.put()
                 .uri("/api/categories/{id}", activeCategory.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(request)
                 .exchange()
@@ -173,6 +177,7 @@ class CategoryControllerTest {
     void deleteCategory_softDeletesTheCategory() {
         restTestClient.delete()
                 .uri("/api/categories/{id}", activeCategory.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                 .exchange()
                 .expectStatus().isNoContent();
 

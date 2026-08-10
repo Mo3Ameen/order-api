@@ -40,6 +40,7 @@ class ExtraControllerTest {
     void getExtras_returnsAllExtras() {
         var result = restTestClient.get()
                 .uri("/api/extras")
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(Extra[].class)
@@ -54,6 +55,7 @@ class ExtraControllerTest {
     void getExtraById_returnsExtraOrNotFound() {
         var result = restTestClient.get()
                 .uri("/api/extras/{id}", activeExtra.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(Extra.class)
@@ -64,6 +66,7 @@ class ExtraControllerTest {
 
         restTestClient.get()
                 .uri("/api/extras/{id}", 999999L)
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                 .exchange()
                 .expectStatus().isNotFound()
                 .expectBody(String.class)
@@ -76,6 +79,7 @@ class ExtraControllerTest {
 
         var result = restTestClient.post()
                 .uri("/api/extras")
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(request)
                 .exchange()
@@ -94,6 +98,7 @@ class ExtraControllerTest {
 
         var result = restTestClient.put()
                 .uri("/api/extras/{id}", activeExtra.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(request)
                 .exchange()
@@ -111,6 +116,7 @@ class ExtraControllerTest {
     void deleteExtra_softDeletesTheExtra() {
         restTestClient.delete()
                 .uri("/api/extras/{id}", activeExtra.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                 .exchange()
                 .expectStatus().isNoContent();
 

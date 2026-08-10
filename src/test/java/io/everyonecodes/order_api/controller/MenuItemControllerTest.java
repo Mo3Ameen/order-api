@@ -230,12 +230,14 @@ class MenuItemControllerTest {
     void adminEndpoints_returnAllMenuItemsAndItemsById() {
         var allItems = restTestClient.get()
                 .uri("/api/menuItems/all")
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(MenuItem[].class)
                 .returnResult().getResponseBody();
         var item = restTestClient.get()
                 .uri("/api/menuItems/all/{id}", inactiveMenuItem.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(MenuItem.class)
@@ -254,6 +256,7 @@ class MenuItemControllerTest {
 
         var result = restTestClient.post()
                 .uri("/api/menuItems")
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(request)
                 .exchange()
@@ -274,6 +277,7 @@ class MenuItemControllerTest {
 
         var result = restTestClient.put()
                 .uri("/api/menuItems/{id}", activeMenuItem.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(request)
                 .exchange()
@@ -293,6 +297,7 @@ class MenuItemControllerTest {
     void deleteMenuItem_softDeletesTheMenuItem() {
         restTestClient.delete()
                 .uri("/api/menuItems/{id}", activeMenuItem.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                 .exchange()
                 .expectStatus().isNoContent();
 
