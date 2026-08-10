@@ -33,6 +33,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/menuItems/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/menuItems/**").hasRole("ADMIN")
 
+                        // kitchen queue: viewing paid-but-unfulfilled orders and marking them fulfilled
+                        .requestMatchers(HttpMethod.GET, "/api/orders/kitchen").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/orders/*/fulfill").hasRole("ADMIN")
+
                         // Everything else (public catalog browsing + placing/managing orders) is open
                         .anyRequest().permitAll()
                 )
