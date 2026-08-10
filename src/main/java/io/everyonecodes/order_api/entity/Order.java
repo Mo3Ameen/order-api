@@ -27,6 +27,8 @@ public class Order {
     private BigDecimal totalPrice;
     @Column(name = "is_paid")
     private Boolean isPaid;
+    @Column(name = "is_fulfilled")
+    private Boolean isFulfilled;
     @Column(name = "customer_email")
     private String customerEmail;
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
