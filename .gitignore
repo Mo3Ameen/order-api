@@ -34,3 +34,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Project notes (not for repo) ###
+CLAUDE.md
+Dev_Journal.md
