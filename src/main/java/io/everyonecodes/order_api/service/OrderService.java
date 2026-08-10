@@ -1,5 +1,7 @@
 package io.everyonecodes.order_api.service;
 
+import io.everyonecodes.order_api.dto.KitchenTicketDto;
+import io.everyonecodes.order_api.dto.KitchenTicketItemDto;
 import io.everyonecodes.order_api.entity.*;
 import io.everyonecodes.order_api.exception.InvalidOrderRequestException;
 import io.everyonecodes.order_api.exception.OrderAlreadyPaidException;
@@ -45,6 +47,7 @@ public class OrderService {
         Order order = new Order();
         order.setCreatedAt(LocalDateTime.now());
         order.setIsPaid(false);
+        order.setIsFulfilled(false);
         order.setTotalPrice(BigDecimal.ZERO);
         return orderRepository.save(order);
     }
@@ -200,6 +203,44 @@ public class OrderService {
 
     public Order findByIdOrThrow(Long id) {
         return orderRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Order "+ id + " not found"));
+    }
+
+    public List<KitchenTicketDto> findAllPaidUnfulfilledOrders() {
+        return orderRepository
+                .findByIsPaidTrueAndIsFulfilledFalse()
+                .stream()
+                .map((order) -> {
+                    KitchenTicketDto ticketDto = new KitchenTicketDto();
+                    ticketDto.setOrderId(order.getId());
+                    ticketDto.setCreatedAt(order.getCreatedAt());
+                    List<KitchenTicketItemDto> items = new ArrayList<>();
+                    var orderedItems = order.getOrderedItems();
+                    for (OrderedItem orderedItem : orderedItems) {
+                        KitchenTicketItemDto itemDto = new KitchenTicketItemDto();
+                        itemDto.setItemName(orderedItem.getMenuItem().getName());
+                        itemDto.setQuantity(orderedItem.getQuantity());
+                        var extrasNames = orderedItem
+                                .getSelectedExtras()
+                                .stream()
+                                .map(selectedExtra -> selectedExtra.getExtra().getName())
+                                .toList();
+                        itemDto.setExtraNames(extrasNames);
+                        items.add(itemDto);
+                    }
+                    ticketDto.setItems(items);
+                    return ticketDto;
+                })
+                .sorted(Comparator.comparing(KitchenTicketDto::getCreatedAt))
+                .toList();
+    }
+
+    public Order markFulfilled(Long orderId) {
+        var order = findByIdOrThrow(orderId);
+        if (!order.getIsPaid()) {
+            throw new InvalidOrderRequestException("Order " + orderId + " is not paid yet.");
+        }
+        order.setIsFulfilled(true);
+        return orderRepository.save(order);
     }
 
     private BigDecimal calculateTotalPrice(Order order) {
