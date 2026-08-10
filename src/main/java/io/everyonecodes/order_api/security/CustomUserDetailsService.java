@@ -1,7 +1,7 @@
 package io.everyonecodes.order_api.security;
 
 import io.everyonecodes.order_api.repository.UserRepository;
-import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullMarked;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -18,7 +18,8 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(@NonNull String username) throws UsernameNotFoundException {
+    @NullMarked
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         var user = userRepository.findByUserName(username).orElseThrow(() -> new UsernameNotFoundException("User " + username + " not found."));
         return User
                 .withUsername(user.getUserName())
