@@ -49,3 +49,10 @@ CREATE TABLE IF NOT EXISTS selected_extras (
     extra_id BIGINT REFERENCES extras(id),
     ordered_item_id BIGINT REFERENCES ordered_items(id)
 );
+
+CREATE TABLE IF NOT EXISTS users (
+    id BIGSERIAL PRIMARY KEY,
+    user_name VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL
+);
