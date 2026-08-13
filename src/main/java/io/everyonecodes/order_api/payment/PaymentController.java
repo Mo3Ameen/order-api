@@ -20,4 +20,14 @@ public class PaymentController {
     public String initiateOrderPayment(@PathVariable Long orderId, @RequestParam @Email String email) throws StripeException {
         return paymentService.initiateOrderPayment(orderId, email);
     }
+
+    @GetMapping("/success")
+    public String paymentSuccess() {
+        return "Payment received. Your order is confirmed";
+    }
+
+    @GetMapping("/failure")
+    public String paymentFailure() {
+        return "Payment was cancelled or failed. Your order has not been paid.";
+    }
 }
