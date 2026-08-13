@@ -270,7 +270,7 @@ public class OrderService {
                 );
     }
 
-    private Order getValidOrder(Long orderId) {
+    public Order getValidOrder(Long orderId) {
         Order order = findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order "+ orderId + " not found"));
 
         if (order.getIsPaid()) {
