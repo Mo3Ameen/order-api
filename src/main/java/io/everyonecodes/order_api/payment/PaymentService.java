@@ -25,16 +25,20 @@ public class PaymentService {
 
     private final OrderService orderService;
     private final String webhookSecret;
+    private final String successUrl;
+    private final String cancelUrl;
 
-    public PaymentService(OrderService orderService, @Value("${stripe.webhook.secret}") String webhookSecret) {
+    public PaymentService(OrderService orderService, @Value("${stripe.webhook.secret}") String webhookSecret,@Value("${stripe.success.url}") String successUrl, @Value("${stripe.cancel.url}") String cancelUrl) {
         this.orderService = orderService;
         this.webhookSecret = webhookSecret;
+        this.successUrl = successUrl;
+        this.cancelUrl = cancelUrl;
     }
 
     public String initiateOrderPayment(Long orderId, String email) throws StripeException {
         Order order = orderService.getValidOrder(orderId);
         order.setCustomerEmail(email);
-        return getCheckoutSession(order, "http://localhost:8080/api/payment/success", "http://localhost:8080/api/payment/failure");
+        return getCheckoutSession(order, successUrl, cancelUrl);
     }
 
     public void handleWebhookEvent(String payload, String sigHeader) throws SignatureVerificationException {
