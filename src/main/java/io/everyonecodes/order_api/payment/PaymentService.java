@@ -5,6 +5,7 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
 import com.stripe.model.StripeObject;
 import com.stripe.model.checkout.Session;
+import com.stripe.net.RequestOptions;
 import com.stripe.net.Webhook;
 import com.stripe.param.checkout.SessionCreateParams;
 import io.everyonecodes.order_api.entity.Order;
@@ -37,8 +38,20 @@ public class PaymentService {
 
     public String initiateOrderPayment(Long orderId, String email) throws StripeException {
         Order order = orderService.getValidOrder(orderId);
+        if (order.getStripeSessionId() != null) {
+            try {
+                Session session = Session.retrieve(order.getStripeSessionId());
+                if ("open".equals(session.getStatus())) {
+                    return session.getUrl();
+                } else if ("complete".equals(session.getStatus())) {
+                    throw new OrderAlreadyPaidException("Order " + order.getId() + " is already paid!");
+                }
+            } catch (StripeException e) {
+                log.warn("Could not retrieve stored session {} for order {} — creating a new one", order.getStripeSessionId(), orderId);
+            }
+        }
         order.setCustomerEmail(email);
-        return getCheckoutSession(order, successUrl, cancelUrl);
+        return getCheckoutSession(order);
     }
 
     public void handleWebhookEvent(String payload, String sigHeader) throws SignatureVerificationException {
@@ -65,7 +78,13 @@ public class PaymentService {
                 log.info("Ignoring checkout session {} — no orderId metadata, not created by this application", session.getId());
                 return;
             }
-            Long orderId = Long.valueOf(rawOrderId);
+            Long orderId;
+            try {
+                orderId = Long.valueOf(rawOrderId);
+            } catch (NumberFormatException e) {
+                log.error("Ignoring checkout session {} — orderId metadata '{}' is not a number", session.getId(), rawOrderId);
+                return;
+            }
 
             String email = (session.getCustomerDetails() == null) ? null : session.getCustomerDetails().getEmail();
             if (email == null || email.isBlank()) {
@@ -84,7 +103,7 @@ public class PaymentService {
         }
     }
 
-    public String getCheckoutSession(Order order, String successUrl, String failureUrl) throws StripeException {
+    private String getCheckoutSession(Order order) throws StripeException {
         log.info("Creating session for order with Id: {}", order.getId());
 
         SessionCreateParams sessionCreateParams = SessionCreateParams.builder()
@@ -93,7 +112,7 @@ public class PaymentService {
                 .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
                 .setBillingAddressCollection(SessionCreateParams.BillingAddressCollection.REQUIRED)
                 .setSuccessUrl(successUrl)
-                .setCancelUrl(failureUrl)
+                .setCancelUrl(cancelUrl)
                 .addLineItem(SessionCreateParams.LineItem
                         .builder()
                         .setQuantity(1L)
@@ -115,8 +134,11 @@ public class PaymentService {
                 .putMetadata("orderId", String.valueOf(order.getId()))
                 .build();
 
-        Session session = Session.create(sessionCreateParams);
-
+        RequestOptions options = RequestOptions.builder()
+                .setIdempotencyKey("order-" + order.getId() + "-" + order.getTotalPrice())
+                .build();
+        Session session = Session.create(sessionCreateParams, options);
+        order.setStripeSessionId(session.getId());
         orderService.save(order);
         log.info("Session created successfully for order with Id : {}", order.getId());
         return session.getUrl();
