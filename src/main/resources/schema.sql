@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS orders (
     is_paid BOOLEAN DEFAULT FALSE,
     is_fulfilled BOOLEAN DEFAULT FALSE,
     total_price DECIMAL(7,2) NOT NULL,
-    customer_email VARCHAR(255)
+    customer_email VARCHAR(255),
+    stripe_session_id VARCHAR(255)
 );
 
 CREATE TABLE IF NOT EXISTS ordered_items (
