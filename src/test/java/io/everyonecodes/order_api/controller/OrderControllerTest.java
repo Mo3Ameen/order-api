@@ -1031,10 +1031,23 @@ class OrderControllerTest {
             assertEquals("customer@example.com", result.getCustomerEmail());
         }
 
+        @Test
+        void returns401_whenNotAuthenticated() {
+            var order = createOrderWithItem();
+
+            restTestClient
+                    .post()
+                    .uri("/api/orders/{orderId}/pay?email={email}", order.getId(), "customer@example.com")
+                    .exchange()
+                    .expectStatus()
+                    .isUnauthorized();
+        }
+
         private RestTestClient.ResponseSpec pay(Long orderId, String email) {
             return restTestClient
                     .post()
                     .uri("/api/orders/{orderId}/pay?email={email}", orderId, email)
+                    .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                     .exchange();
         }
     }
