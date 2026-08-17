@@ -9,6 +9,15 @@ spring.datasource.username=your_db_username
 spring.datasource.password=your_db_password
 spring.datasource.driver-class-name=org.postgresql.Driver
 
+# SMTP relay for receipt emails — MailHog by default (view at http://localhost:8025)
+spring.mail.host=localhost
+spring.mail.port=1025
+# MailHog needs neither auth nor TLS; both flip to true for Mailtrap/Gmail
+spring.mail.properties.mail.smtp.auth=false
+spring.mail.properties.mail.smtp.starttls.enable=false
+# "From" address on receipt emails — must match spring.mail.username exactly when using Gmail
+receipt.from.address=example@test.com
+
 # Stripe secret key (test mode) — Stripe Dashboard > Developers > API keys
 stripe.api.key=sk_test_replace_me
 # Printed by: stripe listen --forward-to localhost:8080/api/webhook/payment
