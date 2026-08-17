@@ -35,6 +35,8 @@ class OrderServiceTest {
     private MenuItemService menuItemService;
     @Mock
     private ExtraService extraService;
+    @Mock
+    private ReceiptService receiptService;
 
     private Order order;
     private MenuItem menuItem;
@@ -374,6 +376,8 @@ class OrderServiceTest {
         var ex = assertThrows(InvalidOrderRequestException.class, () -> orderService.payOrder(1L, "example@gmail.com"));
         var expectedMessage = "Cannot pay for an empty order: " + order.getId();
 
+        verifyNoInteractions(receiptService);
+
         assertEquals(expectedMessage, ex.getMessage());
     }
 
@@ -385,6 +389,8 @@ class OrderServiceTest {
         var ex = assertThrows(InvalidOrderRequestException.class, () -> orderService.payOrder(1L, null));
         var expectedMessage = "Customer email is required to complete payment.";
 
+        verifyNoInteractions(receiptService);
+
         assertEquals(expectedMessage, ex.getMessage());
     }
 
@@ -395,6 +401,8 @@ class OrderServiceTest {
 
         var ex = assertThrows(OrderAlreadyPaidException.class, () -> orderService.payOrder(1L, "example@gmail.com"));
         var expectedMessage = "Order " + order.getId() + " is already paid!";
+
+        verifyNoInteractions(receiptService);
 
         assertEquals(expectedMessage, ex.getMessage());
     }
@@ -408,6 +416,7 @@ class OrderServiceTest {
         orderService.payOrder(1L, "example@gmail.com");
 
         verify(orderRepository, times(1)).save(order);
+        verify(receiptService, times(1)).sendReceipt(order);
         verifyNoMoreInteractions(orderRepository);
 
         assertTrue(order.getIsPaid());
@@ -418,6 +427,8 @@ class OrderServiceTest {
         var ex = assertThrows(ResourceNotFoundException.class, () -> orderService.payOrder(1L, "example@gmail.com"));
 
         String expectedMessage = "Order "+ order.getId() + " not found";
+
+        verifyNoInteractions(receiptService);
 
         assertEquals(expectedMessage, ex.getMessage());
     }
@@ -432,6 +443,8 @@ class OrderServiceTest {
                 InvalidOrderRequestException.class,
                 () -> orderService.payOrder(1L, "")
         );
+
+        verifyNoInteractions(receiptService);
 
         assertEquals(
                 "Customer email is required to complete payment.",
