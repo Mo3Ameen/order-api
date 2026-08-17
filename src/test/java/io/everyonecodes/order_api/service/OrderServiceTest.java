@@ -413,6 +413,7 @@ class OrderServiceTest {
         order.setIsPaid(false);
         order.getOrderedItems().add(new OrderedItem());
 
+        when(orderRepository.save(order)).thenReturn(order);
         orderService.payOrder(1L, "example@gmail.com");
 
         verify(orderRepository, times(1)).save(order);
