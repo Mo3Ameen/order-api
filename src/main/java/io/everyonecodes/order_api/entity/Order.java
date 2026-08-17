@@ -1,5 +1,6 @@
 package io.everyonecodes.order_api.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -33,6 +34,9 @@ public class Order {
     private String customerEmail;
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<OrderedItem> orderedItems = new HashSet<>();
+    @JsonIgnore
+    @Column(name = "stripe_session_id")
+    private String stripeSessionId;
 
     @Override
     public boolean equals(Object o) {
