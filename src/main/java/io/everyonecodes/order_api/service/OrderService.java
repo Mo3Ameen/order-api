@@ -20,11 +20,13 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final MenuItemService menuItemService;
     private final ExtraService extraService;
+    private final ReceiptService receiptService;
 
-    public OrderService(OrderRepository orderRepository, MenuItemService menuItemService, ExtraService extraService) {
+    public OrderService(OrderRepository orderRepository, MenuItemService menuItemService, ExtraService extraService, ReceiptService receiptService) {
         this.orderRepository = orderRepository;
         this.menuItemService = menuItemService;
         this.extraService = extraService;
+        this.receiptService = receiptService;
     }
 
     public List<Order> findAll() {
@@ -128,7 +130,9 @@ public class OrderService {
         } else {
             order.setCustomerEmail(email);
             order.setIsPaid(true);
-            return orderRepository.save(order);
+            Order savedOrder = orderRepository.save(order);
+            receiptService.sendReceipt(savedOrder);
+            return savedOrder;
         }
     }
 
