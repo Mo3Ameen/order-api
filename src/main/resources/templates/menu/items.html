@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Category</title>
+</head>
+<body>
+  <h1 th:text="${category.name}">Category name</h1>
+  <ul>
+    <li th:each="item : ${items}">
+      <a th:href="@{/menu/items/{id}(id=${item.id})}">
+        <h2 th:text="${item.name}">Item name</h2>
+        <p th:text="${item.description}">Item description</p>
+        <span class="price">
+          <span th:text="${#numbers.formatDecimal(item.price, 1, 2)}">0.00</span> €
+        </span>
+      </a>
+    </li>
+  </ul>
+</body>
+</html>
