@@ -15,5 +15,6 @@ import java.util.List;
 public class KitchenTicketDto {
     private Long orderId;
     private LocalDateTime createdAt;
+    private LocalDateTime paidAt;
     private List<KitchenTicketItemDto> items;
 }
