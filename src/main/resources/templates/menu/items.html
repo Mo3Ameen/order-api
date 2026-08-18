@@ -1,11 +1,8 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>Category</title>
-</head>
+<head th:replace="~{fragments/layout :: head(${category.name})}"><title>Category</title></head>
 <body>
-<p><a th:href="@{/menu}">&larr; All categories</a></p>
+<header th:replace="~{fragments/layout :: header}"></header>
 <h1 th:text="${category.name}">Category name</h1>
 <ul>
     <li th:each="item : ${items}">

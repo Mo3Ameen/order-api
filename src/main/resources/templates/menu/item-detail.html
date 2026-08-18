@@ -1,10 +1,8 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>Item details</title>
-</head>
+<head th:replace="~{fragments/layout :: head(${item.name})}"><title>Item</title></head>
 <body>
+<header th:replace="~{fragments/layout :: header}"></header>
 <p><a th:href="@{/menu/categories/{id}(id=${item.category.id})}">&larr; Back to
     <span th:text="${item.category.name}">Category name</span></a></p>
 <img th:unless="${#strings.isEmpty(item.imageUrl)}" th:src="${item.imageUrl}" th:alt="${item.name}">
