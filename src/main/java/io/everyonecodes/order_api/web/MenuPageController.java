@@ -30,4 +30,11 @@ public class MenuPageController {
         model.addAttribute("items", menuItemService.findByCategoryAndIsActive(categoryId));
         return "menu/items";
     }
+
+    @GetMapping("/menu/items/{menuItemId}")
+    public String showItemDetails(@PathVariable Long menuItemId, Model model) {
+        model.addAttribute("item", menuItemService.findByIdAndIsActiveOrThrow(menuItemId));
+        model.addAttribute("extras", menuItemService.getExtras(menuItemId));
+        return "menu/item-detail";
+    }
 }

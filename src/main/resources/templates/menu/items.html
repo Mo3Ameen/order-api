@@ -5,17 +5,20 @@
     <title>Category</title>
 </head>
 <body>
-  <h1 th:text="${category.name}">Category name</h1>
-  <ul>
+<p><a th:href="@{/menu}">&larr; All categories</a></p>
+<h1 th:text="${category.name}">Category name</h1>
+<ul>
     <li th:each="item : ${items}">
-      <a th:href="@{/menu/items/{id}(id=${item.id})}">
-        <h2 th:text="${item.name}">Item name</h2>
-        <p th:text="${item.description}">Item description</p>
-        <span class="price">
-          <span th:text="${#numbers.formatDecimal(item.price, 1, 2)}">0.00</span> €
-        </span>
-      </a>
+        <a th:href="@{/menu/items/{id}(id=${item.id})}">
+            <h2 th:text="${item.name}">Item name</h2>
+            <p th:text="${item.description}">Item description</p>
+            <div class="price">
+                Price: <span th:text="${#numbers.formatDecimal(item.price, 1, 2)}">0.00</span> €
+            </div>
+            <img th:unless="${#strings.isEmpty(item.imageUrl)}" th:src="${item.imageUrl}" th:alt="${item.name}">
+            <img th:if="${#strings.isEmpty(item.imageUrl)}" th:src="@{/images/placeholder.svg}" th:alt="${item.name}">
+        </a>
     </li>
-  </ul>
+</ul>
 </body>
 </html>
