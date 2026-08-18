@@ -58,9 +58,9 @@ class OrderServiceTest {
     @Test
     void findAll() {
         List<Order> orders = List.of(
-                new Order(1L, LocalDateTime.now(), BigDecimal.valueOf(20), false, false, "", new HashSet<>(), null),
-                new Order(2L, LocalDateTime.now().minusDays(3), BigDecimal.valueOf(30), true, false, "", new HashSet<>(), null),
-                new Order(3L, LocalDateTime.now().minusDays(15), BigDecimal.valueOf(10), false, false, "", new HashSet<>(), null)
+                new Order(1L, LocalDateTime.now(), BigDecimal.valueOf(20), false, false, null, "", new HashSet<>(), null),
+                new Order(2L, LocalDateTime.now().minusDays(3), BigDecimal.valueOf(30), true, false, LocalDateTime.now().minusDays(3), "", new HashSet<>(), null),
+                new Order(3L, LocalDateTime.now().minusDays(15), BigDecimal.valueOf(10), false, false, null, "", new HashSet<>(), null)
         );
 
         when(orderRepository.findAll()).thenReturn(orders);
@@ -68,9 +68,9 @@ class OrderServiceTest {
         var result = orderService.findAll();
 
         List<Order> expected = List.of(
-                new Order(1L, LocalDateTime.now(), BigDecimal.valueOf(20), false, false, "", new HashSet<>(), null),
-                new Order(2L, LocalDateTime.now().minusDays(3), BigDecimal.valueOf(30), true, false, "", new HashSet<>(), null),
-                new Order(3L, LocalDateTime.now().minusDays(15), BigDecimal.valueOf(10), false, false, "", new HashSet<>(), null)
+                new Order(1L, LocalDateTime.now(), BigDecimal.valueOf(20), false, false, null, "", new HashSet<>(), null),
+                new Order(2L, LocalDateTime.now().minusDays(3), BigDecimal.valueOf(30), true, false, LocalDateTime.now().minusDays(3), "", new HashSet<>(), null),
+                new Order(3L, LocalDateTime.now().minusDays(15), BigDecimal.valueOf(10), false, false, null, "", new HashSet<>(), null)
         );
 
         assertEquals(expected, result);
@@ -82,7 +82,7 @@ class OrderServiceTest {
     @Test
     void findById_withExistingOrder() {
         Long id = 1L;
-        var expected = new Order(3L, LocalDateTime.now().minusDays(15), BigDecimal.valueOf(10), false, false, "", new HashSet<>(), null);
+        var expected = new Order(3L, LocalDateTime.now().minusDays(15), BigDecimal.valueOf(10), false, false, null, "", new HashSet<>(), null);
 
         when(orderRepository.findById(id)).thenReturn(Optional.of(expected));
 
@@ -904,17 +904,22 @@ class OrderServiceTest {
     }
 
     @Test
-    void findAllPaidUnfulfilledOrders_sortsOldestFirst() {
-        var olderOrder = new Order(1L, LocalDateTime.now().minusDays(2), BigDecimal.ZERO, true, false, "", new HashSet<>(), null);
-        var newerOrder = new Order(2L, LocalDateTime.now(), BigDecimal.ZERO, true, false, "", new HashSet<>(), null);
+    void findAllPaidUnfulfilledOrders_sortsByPaidAtNotCreatedAt() {
+        // Created first, but paid last — should be served second
+        var createdFirstPaidLast = new Order(1L, LocalDateTime.now().minusDays(2), BigDecimal.ZERO, true, false,
+                LocalDateTime.now().minusMinutes(5), "", new HashSet<>(), null);
+        // Created second, but paid first — should be served first
+        var createdLastPaidFirst = new Order(2L, LocalDateTime.now().minusHours(1), BigDecimal.ZERO, true, false,
+                LocalDateTime.now().minusMinutes(30), "", new HashSet<>(), null);
 
-        when(orderRepository.findByIsPaidTrueAndIsFulfilledFalse()).thenReturn(List.of(newerOrder, olderOrder));
+        when(orderRepository.findByIsPaidTrueAndIsFulfilledFalse())
+                .thenReturn(List.of(createdFirstPaidLast, createdLastPaidFirst));
 
         var result = orderService.findAllPaidUnfulfilledOrders();
 
         assertEquals(2, result.size());
-        assertEquals(olderOrder.getId(), result.get(0).getOrderId());
-        assertEquals(newerOrder.getId(), result.get(1).getOrderId());
+        assertEquals(createdLastPaidFirst.getId(), result.get(0).getOrderId());
+        assertEquals(createdFirstPaidLast.getId(), result.get(1).getOrderId());
 
         verify(orderRepository).findByIsPaidTrueAndIsFulfilledFalse();
         verifyNoMoreInteractions(orderRepository);

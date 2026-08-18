@@ -216,12 +216,14 @@ class OrderControllerTest {
         void returnsOnlyPaidAndUnfulfilledOrders() {
             var paidUnfulfilled = createOrderWithItem();
             paidUnfulfilled.setIsPaid(true);
+            paidUnfulfilled.setPaidAt(LocalDateTime.now());
             paidUnfulfilled = orderRepository.save(paidUnfulfilled);
 
             var unpaid = createOrderWithItem();
 
             var paidAndFulfilled = createOrderWithItem();
             paidAndFulfilled.setIsPaid(true);
+            paidAndFulfilled.setPaidAt(LocalDateTime.now());
             paidAndFulfilled.setIsFulfilled(true);
             paidAndFulfilled = orderRepository.save(paidAndFulfilled);
 
@@ -243,6 +245,7 @@ class OrderControllerTest {
         void mapsOrderedItemsAndExtrasCorrectly() {
             var order = createOrderWithItemAndExtra();
             order.setIsPaid(true);
+            order.setPaidAt(LocalDateTime.now());
             order = orderRepository.save(order);
 
             var result = getKitchenOrders()
