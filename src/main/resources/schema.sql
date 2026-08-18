@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS orders (
     id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_paid BOOLEAN DEFAULT FALSE,
+    paid_at TIMESTAMP,
     is_fulfilled BOOLEAN DEFAULT FALSE,
     total_price DECIMAL(7,2) NOT NULL,
     customer_email VARCHAR(255),

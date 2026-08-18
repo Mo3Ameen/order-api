@@ -30,6 +30,8 @@ public class Order {
     private Boolean isPaid;
     @Column(name = "is_fulfilled")
     private Boolean isFulfilled;
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
     @Column(name = "customer_email")
     private String customerEmail;
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
