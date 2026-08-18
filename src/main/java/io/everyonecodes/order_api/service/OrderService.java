@@ -130,6 +130,7 @@ public class OrderService {
         } else {
             order.setCustomerEmail(email);
             order.setIsPaid(true);
+            order.setPaidAt(LocalDateTime.now());
             Order savedOrder = orderRepository.save(order);
             receiptService.sendReceipt(savedOrder);
             return savedOrder;
@@ -217,6 +218,7 @@ public class OrderService {
                     KitchenTicketDto ticketDto = new KitchenTicketDto();
                     ticketDto.setOrderId(order.getId());
                     ticketDto.setCreatedAt(order.getCreatedAt());
+                    ticketDto.setPaidAt(order.getPaidAt());
                     List<KitchenTicketItemDto> items = new ArrayList<>();
                     var orderedItems = order.getOrderedItems();
                     for (OrderedItem orderedItem : orderedItems) {
@@ -234,7 +236,7 @@ public class OrderService {
                     ticketDto.setItems(items);
                     return ticketDto;
                 })
-                .sorted(Comparator.comparing(KitchenTicketDto::getCreatedAt))
+                .sorted(Comparator.comparing(KitchenTicketDto::getPaidAt))
                 .toList();
     }
 
