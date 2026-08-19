@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Menu')}"><title>Menu</title></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<h1>Menu</h1>
+<ul>
+    <li th:each="category : ${categories}">
+        <a th:href="@{/menu/categories/{id}(id=${category.id})}"
+           th:text="${category.name}">Category name</a>
+    </li>
+</ul>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${item.name})}"><title>Item</title></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<p><a th:href="@{/menu/categories/{id}(id=${item.category.id})}">&larr; Back to
+    <span th:text="${item.category.name}">Category name</span></a></p>
+<img th:unless="${#strings.isEmpty(item.imageUrl)}" th:src="${item.imageUrl}" th:alt="${item.name}">
+<img th:if="${#strings.isEmpty(item.imageUrl)}" th:src="@{/images/placeholder.svg}" th:alt="${item.name}">
+<h1 th:text="${item.name}">Item name</h1>
+<p th:text="${item.description}">description</p>
+<div class="price">
+    Price: <span th:text="${#numbers.formatDecimal(item.price, 1, 2)}">0.00</span> €
+</div>
+<div th:if="${!#lists.isEmpty(extras)}">
+    <h2>Extras</h2>
+    <ul>
+        <li th:each="extra : ${extras}">
+            <div class="extra">
+                <span th:text="${extra.name}">extra name</span>
+                +<span th:text="${#numbers.formatDecimal(extra.price, 1, 2)}">0.00</span> €
+            </div>
+        </li>
+    </ul>
+</div>
+</body>
+</html>
