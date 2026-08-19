@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Cart')}"><title>Cart</title></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<h1>Cart</h1>
+<p th:if="${order == null}">your cart is empty</p>
+</body>
+</html>
