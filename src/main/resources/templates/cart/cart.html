@@ -4,6 +4,7 @@
 <body>
 <header th:replace="~{fragments/layout :: header}"></header>
 <h1>Cart</h1>
+<button type="button" onclick="history.back()">Close</button>
 <p th:if="${order == null || order.orderedItems.isEmpty()}">your cart is empty</p>
 <div th:unless="${order == null || order.orderedItems.isEmpty()}">
     <table>
