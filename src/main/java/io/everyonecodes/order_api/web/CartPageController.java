@@ -46,6 +46,16 @@ public class CartPageController {
         return "redirect:/cart";
     }
 
+    @PostMapping("/items/{orderedItemId}/remove")
+    public String removeItem(HttpSession session, @PathVariable Long orderedItemId) {
+        Order order = resolveCart(session);
+        if (order == null) {
+            return "redirect:/cart";
+        }
+        orderService.removeItemFromOrder(order.getId(), orderedItemId);
+        return "redirect:/cart";
+    }
+
     private Order resolveCart(HttpSession session) {
         Long cartOrderId = (Long) session.getAttribute(CART_SESSION_KEY);
         if (cartOrderId == null) {
