@@ -12,16 +12,27 @@
 <div class="price">
     Price: <span th:text="${#numbers.formatDecimal(item.price, 1, 2)}">0.00</span> €
 </div>
-<div th:if="${!#lists.isEmpty(extras)}">
-    <h2>Extras</h2>
-    <ul>
-        <li th:each="extra : ${extras}">
-            <div class="extra">
-                <span th:text="${extra.name}">extra name</span>
-                +<span th:text="${#numbers.formatDecimal(extra.price, 1, 2)}">0.00</span> €
-            </div>
-        </li>
-    </ul>
-</div>
+<form th:action="@{/cart/items}" method="post">
+    <input type="hidden" name="menuItemId" th:value="${item.id}">
+    <div th:if="${!#lists.isEmpty(extras)}">
+        <h2>Extras</h2>
+        <ul>
+            <li th:each="extra : ${extras}">
+                <label>
+                    <input type="checkbox" name="extraIds" th:value="${extra.id}">
+                    <div class="extra">
+                        <span th:text="${extra.name}">extra name</span>
+                        +<span th:text="${#numbers.formatDecimal(extra.price, 1, 2)}">0.00</span> €
+                    </div>
+                </label>
+            </li>
+        </ul>
+    </div>
+    <label>
+        Quantity
+        <input type="number" name="quantity" value="1" min="1">
+    </label>
+    <button type="submit">Add to cart</button>
+</form>
 </body>
 </html>

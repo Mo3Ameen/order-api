@@ -6,8 +6,14 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.Set;
 
 @Controller
+@RequestMapping("/cart")
 public class CartPageController {
 
     private static final String CART_SESSION_KEY = "cartOrderId";
@@ -17,11 +23,20 @@ public class CartPageController {
         this.orderService = orderService;
     }
 
-    @GetMapping("/cart")
+    @GetMapping()
     public String showCart(HttpSession session, Model model) {
         Order order = resolveCart(session);
         model.addAttribute("order", order);
         return "cart/cart";
+    }
+
+    @PostMapping("/items")
+    public String addItemToCart(HttpSession session, @RequestParam Long menuItemId, @RequestParam Integer quantity, @RequestParam(required = false) Set<Long> extraIds) {
+        Order resolved = resolveCart(session);
+        Order order = resolved != null ? resolved : orderService.createOrder();
+        session.setAttribute(CART_SESSION_KEY, order.getId());
+        orderService.addItemToOrder(order.getId(), menuItemId, quantity, extraIds);
+        return "redirect:/cart";
     }
 
     private Order resolveCart(HttpSession session) {

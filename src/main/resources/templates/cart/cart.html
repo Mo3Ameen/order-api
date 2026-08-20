@@ -5,5 +5,36 @@
 <header th:replace="~{fragments/layout :: header}"></header>
 <h1>Cart</h1>
 <p th:if="${order == null}">your cart is empty</p>
+<div th:unless="${order == null}">
+    <table>
+        <thead>
+        <tr>
+            <th>Item</th>
+            <th>Quantity</th>
+            <th>Price</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="orderedItem : ${order.orderedItems}">
+            <td>
+                <span th:text="${orderedItem.menuItem.name}">Item name</span>
+                <div class="selectedExtrass" th:each="selectedExtras : ${orderedItem.selectedExtras}"
+                     th:text="'+ ' + ${selectedExtras.extra.name}">+ extra-name
+                </div>
+            </td>
+            <td th:text="${orderedItem.quantity}">item-quantity</td>
+            <td class="ordered_item_price"><span
+                    th:text="${#numbers.formatDecimal(orderedItem.lineTotal, 1, 2)}">0.00</span> €
+            </td>
+        </tr>
+        </tbody>
+        <tfoot>
+        <tr>
+            <td class="total_price" colspan="2">Total price:</td>
+            <td><span th:text="${#numbers.formatDecimal(order.totalPrice, 1, 2)}">00.00</span> €</td>
+        </tr>
+        </tfoot>
+    </table>
+</div>
 </body>
 </html>
