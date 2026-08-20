@@ -4,7 +4,7 @@
 <body>
 <header th:replace="~{fragments/layout :: header}"></header>
 <h1>Menu</h1>
-<ul>
+<ul class="menu-list">
     <li th:each="category : ${categories}">
         <a th:href="@{/menu/categories/{id}(id=${category.id})}"
            th:text="${category.name}">Category name</a>
