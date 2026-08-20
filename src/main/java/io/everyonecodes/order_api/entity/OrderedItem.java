@@ -35,6 +35,15 @@ public class OrderedItem {
     @OneToMany(mappedBy = "orderedItem", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<SelectedExtra> selectedExtras = new HashSet<>();
 
+    public BigDecimal getLineTotal() {
+        return (priceAtPurchase
+                .add(selectedExtras
+                        .stream()
+                        .map(SelectedExtra::getPriceAtPurchase)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add)))
+                .multiply(BigDecimal.valueOf(quantity));
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Cart')}"><title>Cart</title></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<h1>Cart</h1>
+<button class="close-button" type="button" onclick="history.back()">Close</button>
+<p class="empty-cart" th:if="${order == null || order.orderedItems.isEmpty()}">your cart is empty</p>
+<div th:unless="${order == null || order.orderedItems.isEmpty()}">
+    <table class="cart-table">
+        <thead>
+        <tr>
+            <th>Item</th>
+            <th class="item-quantity">Quantity</th>
+            <th class="item-price">Price</th>
+            <th class="item-actions">Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="orderedItem : ${order.orderedItems}">
+            <td>
+                <span th:text="${orderedItem.menuItem.name}">Item name</span>
+                <div class="extra" th:each="selectedExtra : ${orderedItem.selectedExtras}"
+                     th:text="'+ ' + ${selectedExtra.extra.name}">+ extra-name
+                </div>
+            </td>
+            <td class="item-quantity" th:text="${orderedItem.quantity}">item-quantity</td>
+            <td class="item-price"><span
+                    th:text="${#numbers.formatDecimal(orderedItem.lineTotal, 1, 2)}">0.00</span> €
+            </td>
+            <td class="item-actions">
+                <form th:action="@{/cart/items/{id}/quantity(id=${orderedItem.id})}" method="post">
+                    <label>
+                        change quantity:<br>
+                        <input class="quantity-input" type="number" name="quantity" min="1"
+                               th:value="${orderedItem.quantity}">
+                    </label>
+                    <input type="submit" value="Update">
+                </form>
+                <form th:action="@{/cart/items/{id}/remove(id=${orderedItem.id})}" method="post">
+                    <input type="submit" value="Remove">
+                </form>
+            </td>
+        </tr>
+        </tbody>
+        <tfoot>
+        <tr class="total-row">
+            <td colspan="2">Total price:</td>
+            <td class="item-price"><span
+                    th:text="${#numbers.formatDecimal(order.totalPrice, 1, 2)}">00.00</span> €
+            </td>
+            <td></td>
+        </tr>
+        </tfoot>
+    </table>
+</div>
+</body>
+</html>

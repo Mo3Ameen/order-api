@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -41,8 +40,8 @@ public class SecurityConfig {
                         // Everything else (public catalog browsing + placing/managing orders) is open
                         .anyRequest().permitAll()
                 )
-                // This is a stateless REST API (it uses HTTP Basic authentication), so CSRF tokens are not applicable.
-                .csrf(AbstractHttpConfigurer::disable)
+                // page routes are session-backed and protected; the REST API is exempt because it is stateless and token-free clients use it.
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
                 .httpBasic(Customizer.withDefaults());
         return http.build();
     }

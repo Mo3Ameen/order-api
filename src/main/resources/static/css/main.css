@@ -1,15 +1,13 @@
+/* ============================================================
+   base
+   ============================================================ */
+
 body {
     font-family: system-ui, sans-serif;
-    max-width: 700px;
+    max-width: 800px;
     margin: 0 auto;
     padding: 1rem;
     color: #222;
-}
-
-header {
-    padding-bottom: 0.75rem;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid #ddd;
 }
 
 img {
@@ -18,23 +16,39 @@ img {
     display: block;
 }
 
-ul {
+/* ============================================================
+   site header (fragments/layout.html)
+   ============================================================ */
+
+header {
+    display: flex;
+    gap: 1.25rem;
+    padding-bottom: 0.75rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #ddd;
+}
+
+/* ============================================================
+   menu pages (categories.html, items.html)
+   ============================================================ */
+
+.menu-list {
     list-style: none;
     padding: 0;
 }
 
-li {
+.menu-list li {
     padding: 1rem 0;
     border-bottom: 1px solid #eee;
 }
 
-li > a {
+.menu-list li > a {
     display: block;
     text-decoration: none;
     color: inherit;
 }
 
-li > a:hover h2 {
+.menu-list li > a:hover h2 {
     text-decoration: underline;
 }
 
@@ -42,7 +56,99 @@ li > a:hover h2 {
     font-weight: 600;
 }
 
+/* ============================================================
+   item detail page (item-detail.html)
+   ============================================================ */
+
+.back-link {
+    margin-bottom: 1rem;
+}
+
+.add-to-cart {
+    margin-top: 1.5rem;
+}
+
+.extras-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+}
+
+.extras-list li {
+    padding: 0.25rem 0;
+}
+
+.extras-list label {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.quantity-field {
+    display: block;
+    margin-bottom: 0.75rem;
+}
+
+/* ============================================================
+   cart page (cart/cart.html)
+   ============================================================ */
+
+.close-button {
+    margin-bottom: 1rem;
+}
+
+.empty-cart {
+    color: #555;
+}
+
+.cart-table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.cart-table th,
+.cart-table td {
+    padding: 0.5rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+.cart-table tr {
+    border-bottom: 1px solid #eee;
+}
+
+.cart-table .item-quantity {
+    text-align: center;
+}
+
+.cart-table .item-price {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.cart-table .total-row {
+    font-weight: bold;
+    border-top: 2px solid #ddd;
+}
+
+.cart-table .item-actions form {
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+/* ============================================================
+   shared form bits
+   ============================================================ */
+
 .extra {
     color: #555;
     font-size: 0.9rem;
+}
+
+.cart-table .extra {
+    padding-left: 1rem;
+}
+
+.quantity-input {
+    width: 4rem;
 }
