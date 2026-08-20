@@ -5,10 +5,7 @@ import io.everyonecodes.order_api.service.OrderService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Set;
 
@@ -36,6 +33,16 @@ public class CartPageController {
         Order order = resolved != null ? resolved : orderService.createOrder();
         session.setAttribute(CART_SESSION_KEY, order.getId());
         orderService.addItemToOrder(order.getId(), menuItemId, quantity, extraIds);
+        return "redirect:/cart";
+    }
+
+    @PostMapping("/items/{orderedItemId}/quantity")
+    public String updateQuantity(HttpSession session, @PathVariable Long orderedItemId, @RequestParam Integer quantity) {
+        Order order = resolveCart(session);
+        if (order == null) {
+            return "redirect:/cart";
+        }
+        orderService.updateQuantity(order.getId(), orderedItemId, quantity);
         return "redirect:/cart";
     }
 
