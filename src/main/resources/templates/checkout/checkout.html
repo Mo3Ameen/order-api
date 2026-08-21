@@ -36,9 +36,9 @@
     </tr>
     </tfoot>
 </table>
-<p class="error" th:if="${error}" th:text="${error}">error message</p>
+<p class="checkout-error" th:if="${error}" th:text="${error}">error message</p>
 <form th:action="@{/checkout}" method="post">
-    <input type="submit" value="Pay">
+    <input class="pay-button" type="submit" value="Pay">
 </form>
 </body>
 </html>
