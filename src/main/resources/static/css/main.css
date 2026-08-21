@@ -16,6 +16,16 @@ img {
     display: block;
 }
 
+header a {
+    color: #222;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+header a:hover {
+    color: #c0392b;
+}
+
 /* ============================================================
    site header (fragments/layout.html)
    ============================================================ */
@@ -38,8 +48,15 @@ header {
 }
 
 .menu-list li {
-    padding: 1rem 0;
-    border-bottom: 1px solid #eee;
+    padding: 1rem;
+    border-bottom: none;
+    margin-bottom: 0.5rem;
+    background: #f7f7f7;
+    border-radius: 6px;
+}
+
+.menu-list li:hover {
+    background: #eee;
 }
 
 .menu-list li > a {
