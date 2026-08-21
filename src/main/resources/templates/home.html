@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Home')}"><title>Home</title></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<h1>Restaurant Name</h1>
+<p>Short description about the place, what kind of place it is.</p>
+<a class="menu-link" th:href="@{/menu}">Go to the Menu</a>
+<address class="contact">
+    Please visit us: <br>
+    Restaurant Name <br>
+    Street and House Number <br>
+    ZIP code and city <br>
+    Country <br>
+    <a href="mailto:test@example.com">Email: test@example.com</a> <br>
+    <a href="tel:+43000000000">Phone: +43000000000</a>
+</address>
+<p>Open from <time>10:00</time> to <time>21:00</time> everyday.</p>
+</body>
+</html>
