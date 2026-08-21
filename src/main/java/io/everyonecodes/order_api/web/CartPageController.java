@@ -13,32 +13,31 @@ import java.util.Set;
 @RequestMapping("/cart")
 public class CartPageController {
 
-    private static final String CART_SESSION_KEY = "cartOrderId";
     private final OrderService orderService;
+    private final CartSession cartSession;
 
-    public CartPageController(OrderService orderService) {
+    public CartPageController(OrderService orderService, CartSession cartSession) {
         this.orderService = orderService;
+        this.cartSession = cartSession;
     }
 
     @GetMapping()
     public String showCart(HttpSession session, Model model) {
-        Order order = resolveCart(session);
+        Order order = cartSession.resolve(session);
         model.addAttribute("order", order);
         return "cart/cart";
     }
 
     @PostMapping("/items")
     public String addItemToCart(HttpSession session, @RequestParam Long menuItemId, @RequestParam Integer quantity, @RequestParam(required = false) Set<Long> extraIds) {
-        Order resolved = resolveCart(session);
-        Order order = resolved != null ? resolved : orderService.createOrder();
-        session.setAttribute(CART_SESSION_KEY, order.getId());
+        Order order = cartSession.resolveOrCreate(session);
         orderService.addItemToOrder(order.getId(), menuItemId, quantity, extraIds);
         return "redirect:/cart";
     }
 
     @PostMapping("/items/{orderedItemId}/quantity")
     public String updateQuantity(HttpSession session, @PathVariable Long orderedItemId, @RequestParam Integer quantity) {
-        Order order = resolveCart(session);
+        Order order = cartSession.resolve(session);
         if (order == null) {
             return "redirect:/cart";
         }
@@ -48,21 +47,11 @@ public class CartPageController {
 
     @PostMapping("/items/{orderedItemId}/remove")
     public String removeItem(HttpSession session, @PathVariable Long orderedItemId) {
-        Order order = resolveCart(session);
+        Order order = cartSession.resolve(session);
         if (order == null) {
             return "redirect:/cart";
         }
         orderService.removeItemFromOrder(order.getId(), orderedItemId);
         return "redirect:/cart";
-    }
-
-    private Order resolveCart(HttpSession session) {
-        Long cartOrderId = (Long) session.getAttribute(CART_SESSION_KEY);
-        if (cartOrderId == null) {
-            return null;
-        }
-        return orderService.findById(cartOrderId)
-                .filter(order -> !order.getIsPaid())
-                .orElse(null);
     }
 }
