@@ -58,7 +58,8 @@ public class CheckoutPageController {
     }
 
     @GetMapping("/success")
-    public String getSuccessPage() {
+    public String getSuccessPage(HttpSession session) {
+        cartSession.clearIfPaid(session);
         return "checkout/success";
     }
 

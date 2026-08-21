@@ -31,4 +31,14 @@ public class CartSession {
         session.setAttribute(CART_SESSION_KEY, order.getId());
         return order;
     }
+
+    public void clearIfPaid(HttpSession session) {
+        Long cartOrderId = (Long) session.getAttribute(CART_SESSION_KEY);
+        if (cartOrderId == null) {
+            return;
+        }
+        orderService.findById(cartOrderId)
+                .filter(Order::getIsPaid)
+                .ifPresent(order -> session.removeAttribute(CART_SESSION_KEY));
+    }
 }
