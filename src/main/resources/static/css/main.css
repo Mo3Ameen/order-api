@@ -16,16 +16,6 @@ img {
     display: block;
 }
 
-header a {
-    color: #222;
-    text-decoration: none;
-    font-weight: 500;
-}
-
-header a:hover {
-    color: #c0392b;
-}
-
 /* ============================================================
    site header (fragments/layout.html)
    ============================================================ */
@@ -36,6 +26,22 @@ header {
     padding-bottom: 0.75rem;
     margin-bottom: 1.5rem;
     border-bottom: 1px solid #ddd;
+}
+
+header a {
+    color: #222;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+header a:hover {
+    color: #c0392b;
+}
+
+.site-name {
+    margin-right: auto;
+    font-weight: 700;
+    font-size: 1.15rem;
 }
 
 /* ============================================================
@@ -166,7 +172,8 @@ header {
 }
 
 .pay-button,
-.checkout-link {
+.checkout-link,
+.menu-link {
     display: inline-block;
     margin-top: 1rem;
     padding: 0.6rem 1.25rem;
@@ -181,7 +188,8 @@ header {
 }
 
 .pay-button:hover,
-.checkout-link:hover {
+.checkout-link:hover,
+.menu-link:hover {
     background: #444;
 }
 

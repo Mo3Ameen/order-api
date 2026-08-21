@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:fragment="head(title)">
-    <meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${title}">Title</title>
     <link rel="stylesheet" th:href="@{/css/main.css}"></head>
 <body>
 <header th:fragment="header">
+    <a class="site-name" th:href="@{/}">Restaurant Name</a>
     <a th:href="@{/menu}">Menu</a>
     <a th:href="@{/cart}">Cart</a>
 </header>
