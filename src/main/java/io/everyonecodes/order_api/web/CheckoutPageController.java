@@ -56,4 +56,14 @@ public class CheckoutPageController {
         }
         return "redirect:" + url;
     }
+
+    @GetMapping("/success")
+    public String getSuccessPage() {
+        return "checkout/success";
+    }
+
+    @GetMapping("/failure")
+    public String getFailurePage() {
+        return "checkout/failure";
+    }
 }

@@ -1,0 +1,8 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Payment cancelled')}"><title>Payment cancelled</title></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<h1>Payment canceled</h1>
+<p>Your payment was cancelled. Nothing was charged, and your <a th:href="@{/cart}">cart</a> is still here.</p></body>
+</html>
