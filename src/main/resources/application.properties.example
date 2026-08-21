@@ -24,8 +24,8 @@ stripe.api.key=sk_test_replace_me
 # Must belong to the SAME Stripe account as stripe.api.key, or webhooks never arrive
 stripe.webhook.secret=whsec_replace_me
 # Where Stripe redirects the customer's browser after checkout
-stripe.success.url=http://localhost:8080/api/payment/success
-stripe.cancel.url=http://localhost:8080/api/payment/failure
+stripe.success.url=http://localhost:8080/checkout/success
+stripe.cancel.url=http://localhost:8080/checkout/failure
 
 # Let Hibernate manage your tables based on your @Entity classes
 spring.jpa.hibernate.ddl-auto=update
