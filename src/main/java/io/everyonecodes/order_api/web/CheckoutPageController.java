@@ -59,6 +59,14 @@ public class CheckoutPageController {
 
     @GetMapping("/success")
     public String getSuccessPage(HttpSession session) {
+        Order order = cartSession.resolve(session);
+        if (order != null) {
+            try {
+                paymentService.confirmPaymentFromStripe(order.getId());
+            } catch (StripeException e) {
+                log.error("Could not confirm payment for order #{} with Stripe", order.getId(), e);
+            }
+        }
         cartSession.clearIfPaid(session);
         return "checkout/success";
     }

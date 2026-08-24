@@ -25,6 +25,9 @@ import java.math.BigDecimal;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -226,6 +229,74 @@ class CheckoutPageControllerTest {
         mockMvc.perform(get("/checkout/success"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("checkout/success"));
+    }
+
+    @Test
+    void successPage_asksStripeToConfirmTheOrder() throws Exception {
+        Order cart = createCartWithOneItem();
+
+        mockMvc.perform(get("/checkout/success").session(sessionHolding(cart.getId())))
+                .andExpect(status().isOk())
+                .andExpect(view().name("checkout/success"));
+
+        verify(paymentService).confirmPaymentFromStripe(cart.getId());
+    }
+
+    @Test
+    void successPage_clearsTheSessionCart_whenStripeConfirmsThePayment() throws Exception {
+        Order cart = createCartWithOneItem();
+        MockHttpSession session = sessionHolding(cart.getId());
+
+        /*
+         * Stands in for the reconcile marking the order paid. The cart may only be cleared
+         * after that has happened, so this fails if clearIfPaid runs before the confirmation.
+         */
+        doAnswer(invocation -> {
+            Order confirmed = orderRepository.findById(cart.getId()).orElseThrow();
+            confirmed.setIsPaid(true);
+            orderRepository.save(confirmed);
+            return null;
+        }).when(paymentService).confirmPaymentFromStripe(cart.getId());
+
+        mockMvc.perform(get("/checkout/success").session(session))
+                .andExpect(status().isOk())
+                .andExpect(view().name("checkout/success"));
+
+        assertNull(session.getAttribute(CART_SESSION_KEY),
+                "the reconcile paid the order, so the cart must be forgotten");
+    }
+
+    @Test
+    void successPage_rendersAndKeepsTheCart_whenStripeIsUnreachable() throws Exception {
+        Order cart = createCartWithOneItem();
+        MockHttpSession session = sessionHolding(cart.getId());
+        doThrow(new ApiConnectionException("stripe is unreachable"))
+                .when(paymentService).confirmPaymentFromStripe(anyLong());
+
+        mockMvc.perform(get("/checkout/success").session(session))
+                .andExpect(status().isOk())
+                .andExpect(view().name("checkout/success"));
+
+        assertEquals(cart.getId(), session.getAttribute(CART_SESSION_KEY),
+                "payment could not be confirmed, so the cart must survive");
+    }
+
+    @Test
+    void successPage_doesNotAskStripe_whenSessionHasNoCart() throws Exception {
+        mockMvc.perform(get("/checkout/success"))
+                .andExpect(status().isOk());
+
+        verify(paymentService, never()).confirmPaymentFromStripe(anyLong());
+    }
+
+    @Test
+    void successPage_doesNotAskStripe_whenTheOrderIsAlreadyPaid() throws Exception {
+        Order paidCart = createPaidCart();
+
+        mockMvc.perform(get("/checkout/success").session(sessionHolding(paidCart.getId())))
+                .andExpect(status().isOk());
+
+        verify(paymentService, never()).confirmPaymentFromStripe(anyLong());
     }
 
     // ---------- GET /checkout/failure ----------

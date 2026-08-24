@@ -103,6 +103,30 @@ public class PaymentService {
         }
     }
 
+    public void confirmPaymentFromStripe(Long orderId) throws StripeException {
+
+        Order order = orderService.findByIdOrThrow(orderId);
+        if (order.getIsPaid() || order.getStripeSessionId() == null) {
+            return;
+        }
+
+        Session session = Session.retrieve(order.getStripeSessionId());
+        if (!"paid".equals(session.getPaymentStatus())) {
+            return;
+        }
+
+        String email = (session.getCustomerDetails() == null) ? null : session.getCustomerDetails().getEmail();
+        if (email == null || email.isBlank()) {
+            return;
+        }
+
+        try {
+            orderService.payOrder(orderId, email);
+        } catch (OrderAlreadyPaidException e) {
+            log.info("Order {} was already paid — the webhook got there first", orderId);
+        }
+    }
+
     private String getCheckoutSession(Order order) throws StripeException {
         log.info("Creating session for order with Id: {}", order.getId());
 
