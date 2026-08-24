@@ -3,18 +3,19 @@
 <head th:replace="~{fragments/layout :: head('Home')}"><title>Home</title></head>
 <body>
 <header th:replace="~{fragments/layout :: header}"></header>
-<h1>Restaurant Name</h1>
-<p>Short description about the place, what kind of place it is.</p>
+<img class="hero" th:src="@{/images/hero.jpg}" alt="Dining room at Golden Fork">
+<h1>Golden Fork</h1>
+<p class="home-intro">Burgers, pizza and cold drinks — cooked fresh, served fast.</p>
 <a class="menu-link" th:href="@{/menu}">Go to the Menu</a>
 <address class="contact">
     Please visit us: <br>
-    Restaurant Name <br>
-    Street and House Number <br>
-    ZIP code and city <br>
-    Country <br>
-    <a href="mailto:test@example.com">Email: test@example.com</a> <br>
-    <a href="tel:+43000000000">Phone: +43000000000</a>
+    Golden Fork <br>
+    Musterstraße 12 <br>
+    1010 Wien <br>
+    Austria <br>
+    <a href="mailto:hello@example.com">Email: hello@example.com</a> <br>
+    <a href="tel:+4312345678">Phone: +43 1 234 56 78</a>
 </address>
-<p>Open from <time>10:00</time> to <time>21:00</time> everyday.</p>
+<p class="hours">Open from <time>10:00</time> to <time>21:00</time> everyday.</p>
 </body>
 </html>
