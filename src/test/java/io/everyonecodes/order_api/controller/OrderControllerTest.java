@@ -396,6 +396,22 @@ class OrderControllerTest {
         }
 
         @Test
+        void returns400_whenQuantityIsAboveTheMaximum() {
+            var order = createOrder(false);
+            var body = new AddItemRequestDto(activeMenuItem.getId(), 101, null);
+
+            var result = post(order.getId(), body)
+                    .expectStatus()
+                    .isBadRequest()
+                    .expectBody(String.class)
+                    .returnResult()
+                    .getResponseBody();
+
+            assertNotNull(result);
+            assertTrue(result.contains("Quantity can not be more than 100"));
+        }
+
+        @Test
         void returns400_whenQuantityIsNull() {
             var order = createOrder(false);
             var body = new AddItemRequestDto(activeMenuItem.getId(), null, null);
@@ -407,7 +423,7 @@ class OrderControllerTest {
                     .returnResult()
                     .getResponseBody();
 
-            assertEquals("Quantity can not be null or less than 1", result);
+            assertEquals("Quantity can not be null, less than 1 or more than 100", result);
         }
 
         @Test
@@ -617,7 +633,22 @@ class OrderControllerTest {
                     .returnResult()
                     .getResponseBody();
 
-            assertEquals("Quantity can not be null or less than 1", result);
+            assertEquals("Quantity can not be null, less than 1 or more than 100", result);
+        }
+
+        @Test
+        void returns400_whenQuantityIsAboveTheMaximum() {
+            var order = createOrderWithItem();
+            var item = firstItem(order);
+
+            var result = updateQuantity(order.getId(), item.getId(), 101)
+                    .expectStatus()
+                    .isBadRequest()
+                    .expectBody(String.class)
+                    .returnResult()
+                    .getResponseBody();
+
+            assertEquals("Quantity can not be null, less than 1 or more than 100", result);
         }
 
         @Test
