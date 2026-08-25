@@ -32,7 +32,7 @@
                 <form th:action="@{/cart/items/{id}/quantity(id=${orderedItem.id})}" method="post">
                     <label>
                         change quantity:<br>
-                        <input class="quantity-input" type="number" name="quantity" min="1"
+                        <input class="quantity-input" type="number" name="quantity" min="1" max="100"
                                th:value="${orderedItem.quantity}">
                     </label>
                     <input type="submit" value="Update">

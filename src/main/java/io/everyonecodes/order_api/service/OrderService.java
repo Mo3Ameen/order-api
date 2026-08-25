@@ -17,6 +17,7 @@ import java.util.*;
 @Service
 public class OrderService {
 
+    private final int maximumQuantity = 100;
     private final OrderRepository orderRepository;
     private final MenuItemService menuItemService;
     private final ExtraService extraService;
@@ -56,8 +57,8 @@ public class OrderService {
 
     @Transactional
     public Order addItemToOrder(Long orderId, Long menuItemId, Integer quantity, Set<Long> extraIds) {
-        if (quantity == null || quantity <= 0) {
-            throw new InvalidOrderRequestException("Quantity can not be null or less than 1");
+        if (quantity == null || quantity <= 0 || quantity > maximumQuantity) {
+            throw new InvalidOrderRequestException("Quantity can not be null, less than 1 or more than " + maximumQuantity);
         }
 
         Order order = getValidOrder(orderId);
@@ -103,8 +104,7 @@ public class OrderService {
         }
 
         order.getOrderedItems().add(orderedItem);
-        order.setTotalPrice(calculateTotalPrice(order));
-
+        applyTotalPrice(order);
         return orderRepository.save(order);
     }
 
@@ -143,13 +143,13 @@ public class OrderService {
 
         OrderedItem orderedItem = getOrderedItemFromOrder(order, orderedItemId);
 
-        if (quantity != null && quantity > 0) {
+        if (quantity != null && quantity > 0 && quantity <= maximumQuantity) {
             orderedItem.setQuantity(quantity);
         } else {
-            throw new InvalidOrderRequestException("Quantity can not be null or less than 1");
+            throw new InvalidOrderRequestException("Quantity can not be null, less than 1 or more than " + maximumQuantity);
         }
 
-        order.setTotalPrice(calculateTotalPrice(order));
+        applyTotalPrice(order);
 
         return orderRepository.save(order);
     }
@@ -201,7 +201,7 @@ public class OrderService {
         selectedExtra.setPriceAtPurchase(extra.getPrice());
         selectedExtra.setOrderedItem(item);
         item.getSelectedExtras().add(selectedExtra);
-        order.setTotalPrice(calculateTotalPrice(order));
+        applyTotalPrice(order);
 
         return orderRepository.save(order);
     }
@@ -250,7 +250,7 @@ public class OrderService {
     }
 
     private BigDecimal calculateTotalPrice(Order order) {
-        if (order.getOrderedItems() == null) {
+        if (order.getOrderedItems() == null || order.getOrderedItems().isEmpty()) {
             return BigDecimal.ZERO;
         }
 
@@ -266,6 +266,17 @@ public class OrderService {
                     return extrasTotal.add(itemPrice).multiply(BigDecimal.valueOf(item.getQuantity()));
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private void applyTotalPrice(Order order) {
+        BigDecimal total = calculateTotalPrice(order);
+        int maximumTotalPrice = 10000;
+
+        if (total.compareTo(BigDecimal.valueOf(maximumTotalPrice)) > 0) {
+            throw new InvalidOrderRequestException("Your Order total price is more than " + maximumTotalPrice + "!");
+        }
+
+        order.setTotalPrice(total);
     }
 
     private static OrderedItem getOrderedItemFromOrder(Order order, Long orderedItemId) {
