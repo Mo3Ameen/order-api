@@ -169,10 +169,30 @@ class OrderServiceTest {
         var exceptionWithZero = assertThrows(InvalidOrderRequestException.class, () -> orderService.addItemToOrder(1L, 10L, 0, null));
         var exceptionWithNull = assertThrows(InvalidOrderRequestException.class, () -> orderService.addItemToOrder(1L, 10L, null, null));
 
-        String expectedMessage = "Quantity can not be null or less than 1";
+        String expectedMessage = "Quantity can not be null, less than 1 or more than 100";
 
         assertEquals(expectedMessage, exceptionWithZero.getMessage());
         assertEquals(expectedMessage, exceptionWithNull.getMessage());
+    }
+
+    @Test
+    void addItemToOrder_throwsWhenQuantityIsAboveTheMaximum() {
+        var exception = assertThrows(InvalidOrderRequestException.class, () -> orderService.addItemToOrder(1L, 10L, 101, null));
+
+        assertEquals("Quantity can not be null, less than 1 or more than 100", exception.getMessage());
+        verifyNoInteractions(orderRepository);
+    }
+
+    @Test
+    void addItemToOrder_acceptsTheMaximumQuantity() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(menuItemService.findByIdOrThrow(10L)).thenReturn(menuItem);
+
+        orderService.addItemToOrder(1L, 10L, 100, null);
+
+        // 100 x 10.00 = 1000.00, under the 10000 order limit
+        assertEquals(0, BigDecimal.valueOf(1000).compareTo(order.getTotalPrice()));
+        verify(orderRepository).save(order);
     }
 
     @Test
@@ -497,10 +517,26 @@ class OrderServiceTest {
         var exceptionWithNull = assertThrows(InvalidOrderRequestException.class, () -> orderService.updateQuantity(1L, 10L, null));
         var exceptionWithZero = assertThrows(InvalidOrderRequestException.class, () -> orderService.updateQuantity(1L, 10L, 0));
 
-        String expectedMessage = "Quantity can not be null or less than 1";
+        String expectedMessage = "Quantity can not be null, less than 1 or more than 100";
 
         assertEquals(expectedMessage, exceptionWithNull.getMessage());
         assertEquals(expectedMessage, exceptionWithZero.getMessage());
+    }
+
+    @Test
+    void updateQuantity_throwsWhenQuantityIsAboveTheMaximum() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        var orderedItem = new OrderedItem();
+        orderedItem.setId(10L);
+        orderedItem.setQuantity(2);
+        order.getOrderedItems().add(orderedItem);
+
+        var exception = assertThrows(InvalidOrderRequestException.class, () -> orderService.updateQuantity(1L, 10L, 101));
+
+        assertEquals("Quantity can not be null, less than 1 or more than 100", exception.getMessage());
+        assertEquals(2, orderedItem.getQuantity(), "a rejected quantity must not be written to the item");
+        verify(orderRepository, never()).save(any());
     }
 
     @Test
@@ -538,6 +574,49 @@ class OrderServiceTest {
 
         assertEquals(3, savedItem.getQuantity());
         assertEquals(BigDecimal.valueOf(30), order.getTotalPrice());
+    }
+
+    @Test
+    void updateQuantity_throwsWhenTheOrderTotalWouldExceedTheLimit() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        var orderedItem = new OrderedItem();
+        orderedItem.setId(10L);
+        orderedItem.setQuantity(1);
+        orderedItem.setPriceAtPurchase(BigDecimal.valueOf(999.99));
+        order.getOrderedItems().add(orderedItem);
+
+        // an allowed quantity, but 100 x 999.99 = 99999.00 is over the 10000 order limit
+        var exception = assertThrows(InvalidOrderRequestException.class, () -> orderService.updateQuantity(1L, 10L, 100));
+
+        assertEquals("Your Order total price is more than 10000!", exception.getMessage());
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void removeItemFromOrder_isNotBlockedByTheTotalLimit() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        var first = new OrderedItem();
+        first.setId(10L);
+        first.setQuantity(100);
+        first.setPriceAtPurchase(BigDecimal.valueOf(999.99));
+        order.getOrderedItems().add(first);
+
+        var second = new OrderedItem();
+        second.setId(11L);
+        second.setQuantity(100);
+        second.setPriceAtPurchase(BigDecimal.valueOf(999.99));
+        order.getOrderedItems().add(second);
+
+        /*
+         * Both lines are over the limit on their own, so the total is still over it after the
+         * removal. Removing must stay unguarded, or a customer could never shrink such a cart.
+         */
+        assertDoesNotThrow(() -> orderService.removeItemFromOrder(1L, 11L));
+
+        assertEquals(1, order.getOrderedItems().size());
+        verify(orderRepository).save(order);
     }
 
     @Test
