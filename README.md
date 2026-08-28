@@ -269,8 +269,6 @@ Tracked as GitHub issues. Listed here because knowing what is missing is part of
 - **Page errors render as plain text.** The global exception handler is `@RestControllerAdvice` and applies to page controllers too, so a bad id gives a bare 404 body instead of a styled error page.
 - **Extras cannot be linked to menu items through the API.** The join is writable only by SQL — the association half of admin CRUD is missing.
 
-[//]: # (- **`PaymentService` has no unit tests.** It is covered only indirectly, because the Stripe SDK's static methods need `mockStatic` to stub.)
-
 ---
 
 ## Author
@@ -279,7 +277,6 @@ Tracked as GitHub issues. Listed here because knowing what is missing is part of
 
 - 💼 [LinkedIn](https://www.linkedin.com/in/mohammad-ameen-kanaan-763564230/)
 - ▶️ [Project demo video](https://youtu.be/BloftlyhFDU)
-- 📄 [CV](file:///C:/Users/ASUS%20VivoBook/Documents/My%20files/MoAmeen/CV_Mohammad%20Ameen%20Kanaan_EN.pdf)
 
 
 > The restaurant, its address and its contact details are fictional placeholders.
