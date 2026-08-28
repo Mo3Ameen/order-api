@@ -42,16 +42,16 @@ The app serves **two front ends from one codebase**: a REST API for programmatic
 
 ## Tech stack
 
-| | |
-|---|---|
-| Language | Java 21 |
+|           |                                                           |
+|-----------|-----------------------------------------------------------|
+| Language  | Java 21                                                   |
 | Framework | Spring Boot 4.1 — Web MVC, Data JPA, Security, Validation |
-| Database | PostgreSQL + Hibernate |
-| Views | Thymeleaf (server-side rendering) |
-| Payments | Stripe Checkout + webhooks (`stripe-java`) |
-| Email | Spring Mail / SMTP |
-| Testing | JUnit 5, Mockito, MockMvc, `spring-security-test` |
-| Build | Maven |
+| Database  | PostgreSQL + Hibernate                                    |
+| Views     | Thymeleaf (server-side rendering)                         |
+| Payments  | Stripe Checkout + webhooks (`stripe-java`)                |
+| Email     | Spring Mail / SMTP                                        |
+| Testing   | JUnit 5, Mockito, MockMvc, `spring-security-test`         |
+| Build     | Maven                                                     |
 
 ---
 
@@ -200,40 +200,40 @@ Public endpoints are open. Everything marked 🔒 requires HTTP Basic auth as an
 
 ### Browsing
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/api/categories` | Active categories |
-| `GET` | `/api/categories/{id}` | One active category |
-| `GET` | `/api/menuItems/{id}` | One active menu item |
-| `GET` | `/api/menuItems/{id}/extras` | Active extras for an item |
+| Method | Path                         | Description               |
+|--------|------------------------------|---------------------------|
+| `GET`  | `/api/categories`            | Active categories         |
+| `GET`  | `/api/categories/{id}`       | One active category       |
+| `GET`  | `/api/menuItems/{id}`        | One active menu item      |
+| `GET`  | `/api/menuItems/{id}/extras` | Active extras for an item |
 
 ### Cart and orders
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/api/orders/{id}` | An order with its total |
-| `POST` | `/api/orders/{id}/items` | Add an item |
-| `PUT` | `/api/orders/{id}/items/{itemId}` | Change quantity |
-| `DELETE` | `/api/orders/{id}/items/{itemId}` | Remove an item |
-| `POST` | `/api/orders/{id}/items/{itemId}/extras/{extraId}` | Add an extra |
-| `DELETE` | `/api/orders/{id}/items/{itemId}/extras/{selectedExtraId}` | Remove an extra |
+| Method   | Path                                                       | Description             |
+|----------|------------------------------------------------------------|-------------------------|
+| `GET`    | `/api/orders/{id}`                                         | An order with its total |
+| `POST`   | `/api/orders/{id}/items`                                   | Add an item             |
+| `PUT`    | `/api/orders/{id}/items/{itemId}`                          | Change quantity         |
+| `DELETE` | `/api/orders/{id}/items/{itemId}`                          | Remove an item          |
+| `POST`   | `/api/orders/{id}/items/{itemId}/extras/{extraId}`         | Add an extra            |
+| `DELETE` | `/api/orders/{id}/items/{itemId}/extras/{selectedExtraId}` | Remove an extra         |
 
 ### Payment
 
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/api/payment/{orderId}` | Start a Stripe Checkout session, returns the redirect URL |
-| `POST` | `/api/webhook/payment` | Stripe webhook receiver (signature verified) |
-| `POST` | `/api/orders/{orderId}/pay` 🔒 | Manual cash override, bypasses Stripe |
+| Method | Path                           | Description                                               |
+|--------|--------------------------------|-----------------------------------------------------------|
+| `POST` | `/api/payment/{orderId}`       | Start a Stripe Checkout session, returns the redirect URL |
+| `POST` | `/api/webhook/payment`         | Stripe webhook receiver (signature verified)              |
+| `POST` | `/api/orders/{orderId}/pay` 🔒 | Manual cash override, bypasses Stripe                     |
 
 ### Admin
 
-| Method | Path | Description |
-|---|---|---|
-| `POST` `PUT` `DELETE` | `/api/categories`, `/api/menuItems`, `/api/extras` 🔒 | Menu CRUD (soft delete) |
-| `GET` | `/api/{resource}/all` 🔒 | Includes inactive records |
-| `GET` | `/api/orders/kitchen` 🔒 | Paid, unfulfilled orders, oldest payment first |
-| `PUT` | `/api/orders/{id}/fulfill` 🔒 | Mark an order served |
+| Method                | Path                                                  | Description                                    |
+|-----------------------|-------------------------------------------------------|------------------------------------------------|
+| `POST` `PUT` `DELETE` | `/api/categories`, `/api/menuItems`, `/api/extras` 🔒 | Menu CRUD (soft delete)                        |
+| `GET`                 | `/api/{resource}/all` 🔒                              | Includes inactive records                      |
+| `GET`                 | `/api/orders/kitchen` 🔒                              | Paid, unfulfilled orders, oldest payment first |
+| `PUT`                 | `/api/orders/{id}/fulfill` 🔒                         | Mark an order served                           |
 
 ### Pages
 
