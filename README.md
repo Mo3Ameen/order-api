@@ -6,19 +6,13 @@ Built solo over ~8 weeks as the capstone project of a Java backend apprenticeshi
 
 **▶️ [Watch the 1-minute demo](https://youtu.be/BloftlyhFDU)**
 
-<!-- TODO: replace ADD_VIDEO_LINK_HERE with the unlisted YouTube URL -->
-
 ---
 
 ## Screenshots
 
-<!-- TODO: add some Screenshots -->
-
-<!-- TODO: add 3 screenshots to docs/screenshots/ and uncomment
-| Menu | Cart | Checkout |
-|---|---|---|
+| Menu                               | Cart                               | Checkout                                   |
+|------------------------------------|------------------------------------|--------------------------------------------|
 | ![Menu](docs/screenshots/menu.png) | ![Cart](docs/screenshots/cart.png) | ![Checkout](docs/screenshots/checkout.png) |
--->
 
 ---
 
