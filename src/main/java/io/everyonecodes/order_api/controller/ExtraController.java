@@ -1,5 +1,6 @@
 package io.everyonecodes.order_api.controller;
 
+import io.everyonecodes.order_api.dto.ExtraRequestDto;
 import io.everyonecodes.order_api.entity.Extra;
 import io.everyonecodes.order_api.service.ExtraService;
 import org.springframework.http.HttpStatus;
@@ -32,14 +33,14 @@ public class ExtraController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Extra postExtra(@RequestBody Extra extra) {
-        return service.createExtra(extra);
+    public Extra postExtra(@RequestBody ExtraRequestDto extraRequestDto) {
+        return service.createExtra(extraRequestDto);
     }
 
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public Extra putExtra(@RequestBody Extra extra, @PathVariable Long id) {
-        return service.updateExtra(extra, id);
+    public Extra putExtra(@RequestBody ExtraRequestDto extraRequestDto, @PathVariable Long id) {
+        return service.updateExtra(extraRequestDto, id);
     }
 
     @DeleteMapping("/{id}")

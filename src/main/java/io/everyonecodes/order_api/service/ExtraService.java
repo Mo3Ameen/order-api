@@ -1,12 +1,15 @@
 package io.everyonecodes.order_api.service;
 
+import io.everyonecodes.order_api.dto.ExtraRequestDto;
 import io.everyonecodes.order_api.entity.Extra;
 import io.everyonecodes.order_api.entity.MenuItem;
 import io.everyonecodes.order_api.exception.ResourceNotFoundException;
 import io.everyonecodes.order_api.repository.ExtraRepository;
+import io.everyonecodes.order_api.repository.MenuItemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -14,9 +17,11 @@ import java.util.Set;
 public class ExtraService {
 
     private final ExtraRepository repository;
+    private final MenuItemRepository menuItemRepository;
 
-    public ExtraService(ExtraRepository repository) {
+    public ExtraService(ExtraRepository repository, MenuItemRepository menuItemRepository) {
         this.repository = repository;
+        this.menuItemRepository = menuItemRepository;
     }
 
     public List<Extra> findByMenuItemsContainingAndIsActive(MenuItem menuItem) {
@@ -27,17 +32,29 @@ public class ExtraService {
         return repository.findAll();
     }
 
-    public Extra updateExtra(Extra extra, Long id) {
-        Extra existingExtra = findExtraByIdOrThrow(id);
-        existingExtra.setName(extra.getName());
-        existingExtra.setIsActive(extra.getIsActive());
-        existingExtra.setPrice(extra.getPrice());
-        return repository.save(existingExtra);
+    @Transactional
+    public Extra updateExtra(ExtraRequestDto dto, Long id) {
+        Extra extra = findExtraByIdOrThrow(id);
+        extra.setName(dto.getName());
+        extra.setIsActive(dto.getIsActive());
+        extra.setPrice(dto.getPrice());
+        if (dto.getMenuItemIds() != null) {
+            List<MenuItem> menuItems = findMenuItemsOrThrow(dto.getMenuItemIds());
+            extra.setMenuItems(new HashSet<>(menuItems));
+        }
+        return repository.save(extra);
     }
 
-    public Extra createExtra(Extra extra) {
-        extra.setId(null);
-        extra.setIsActive(extra.getIsActive() != null ? extra.getIsActive() : true);
+    @Transactional
+    public Extra createExtra(ExtraRequestDto dto) {
+        Extra extra = new Extra();
+        extra.setName(dto.getName());
+        extra.setPrice(dto.getPrice());
+        extra.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : true);
+        if (dto.getMenuItemIds() != null) {
+            List<MenuItem> menuItems = findMenuItemsOrThrow(dto.getMenuItemIds());
+            extra.setMenuItems(new HashSet<>(menuItems));
+        }
         return repository.save(extra);
     }
 
@@ -67,5 +84,13 @@ public class ExtraService {
         Extra extra = findExtraByIdOrThrow(extraId);
         extra.getMenuItems().remove(menuItem);
         repository.save(extra);
+    }
+
+    private List<MenuItem> findMenuItemsOrThrow(Set<Long> ids) {
+        List<MenuItem> menuItems = menuItemRepository.findAllById(ids);
+        if (menuItems.size() != ids.size()) {
+            throw new ResourceNotFoundException("One or more menu items were not found");
+        }
+        return menuItems;
     }
 }

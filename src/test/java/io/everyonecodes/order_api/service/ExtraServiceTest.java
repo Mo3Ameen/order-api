@@ -1,9 +1,11 @@
 package io.everyonecodes.order_api.service;
 
+import io.everyonecodes.order_api.dto.ExtraRequestDto;
 import io.everyonecodes.order_api.entity.Extra;
 import io.everyonecodes.order_api.entity.MenuItem;
 import io.everyonecodes.order_api.exception.ResourceNotFoundException;
 import io.everyonecodes.order_api.repository.ExtraRepository;
+import io.everyonecodes.order_api.repository.MenuItemRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -27,6 +29,9 @@ class ExtraServiceTest {
 
     @Mock
     private ExtraRepository repository;
+
+    @Mock
+    private MenuItemRepository menuItemRepository;
 
     @Test
     void findAll() {
@@ -114,39 +119,80 @@ class ExtraServiceTest {
     }
 
     @Test
-    void createExtra_resetsIdAndDefaultsToActive() {
-        var extra = new Extra(5L, "Olives", BigDecimal.ONE, null, new HashSet<>());
-        when(repository.save(extra)).thenReturn(extra);
+    void createExtra_defaultsToActive() {
+        var dto = new ExtraRequestDto("Olives", BigDecimal.ONE, null, null);
+        when(repository.save(any(Extra.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        var result = service.createExtra(extra);
+        var result = service.createExtra(dto);
 
         assertNull(result.getId());
+        assertEquals("Olives", result.getName());
+        assertEquals(BigDecimal.ONE, result.getPrice());
         assertTrue(result.getIsActive());
-        verify(repository).save(extra);
+        verify(repository).save(any(Extra.class));
         verifyNoMoreInteractions(repository);
+        verifyNoInteractions(menuItemRepository);
     }
 
     @Test
     void createExtra_preservesAnExplicitInactiveFlag() {
-        var extra = new Extra(5L, "Archived Olives", BigDecimal.ONE, false, new HashSet<>());
-        when(repository.save(extra)).thenReturn(extra);
+        var dto = new ExtraRequestDto("Archived Olives", BigDecimal.ONE, false, null);
+        when(repository.save(any(Extra.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        var result = service.createExtra(extra);
+        var result = service.createExtra(dto);
 
-        assertNull(result.getId());
         assertFalse(result.getIsActive());
-        verify(repository).save(extra);
+        verify(repository).save(any(Extra.class));
         verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void createExtra_preservesAnExplicitActiveFlag() {
+        var dto = new ExtraRequestDto("Olives", BigDecimal.ONE, true, null);
+        when(repository.save(any(Extra.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var result = service.createExtra(dto);
+
+        assertTrue(result.getIsActive());
+    }
+
+    @Test
+    void createExtra_linksTheRequestedMenuItems() {
+        var burger = new MenuItem(1L, "Burger", "", BigDecimal.TEN, "", true, new HashSet<>(), null);
+        var wrap = new MenuItem(2L, "Wrap", "", BigDecimal.TEN, "", true, new HashSet<>(), null);
+        var dto = new ExtraRequestDto("Bacon", BigDecimal.TWO, true, Set.of(1L, 2L));
+        when(menuItemRepository.findAllById(Set.of(1L, 2L))).thenReturn(List.of(burger, wrap));
+        when(repository.save(any(Extra.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var result = service.createExtra(dto);
+
+        assertEquals(2, result.getMenuItems().size());
+        assertTrue(result.getMenuItems().contains(burger));
+        assertTrue(result.getMenuItems().contains(wrap));
+        verify(menuItemRepository).findAllById(Set.of(1L, 2L));
+        verify(repository).save(any(Extra.class));
+    }
+
+    @Test
+    void createExtra_throwsWhenAMenuItemDoesNotExist() {
+        var burger = new MenuItem(1L, "Burger", "", BigDecimal.TEN, "", true, new HashSet<>(), null);
+        var dto = new ExtraRequestDto("Bacon", BigDecimal.TWO, true, Set.of(1L, 999L));
+        when(menuItemRepository.findAllById(Set.of(1L, 999L))).thenReturn(List.of(burger));
+
+        var exception = assertThrows(ResourceNotFoundException.class, () -> service.createExtra(dto));
+
+        assertEquals("One or more menu items were not found", exception.getMessage());
+        verifyNoInteractions(repository);
     }
 
     @Test
     void updateExtra_updatesEveryMutableField() {
         var existing = new Extra(1L, "Cheese", BigDecimal.ONE, true, new HashSet<>());
-        var update = new Extra(null, "Bacon", BigDecimal.valueOf(2), false, new HashSet<>());
+        var dto = new ExtraRequestDto("Bacon", BigDecimal.valueOf(2), false, null);
         when(repository.findById(1L)).thenReturn(Optional.of(existing));
         when(repository.save(existing)).thenReturn(existing);
 
-        var result = service.updateExtra(update, 1L);
+        var result = service.updateExtra(dto, 1L);
 
         assertEquals("Bacon", result.getName());
         assertEquals(BigDecimal.valueOf(2), result.getPrice());
@@ -154,6 +200,66 @@ class ExtraServiceTest {
         verify(repository).findById(1L);
         verify(repository).save(existing);
         verifyNoMoreInteractions(repository);
+        verifyNoInteractions(menuItemRepository);
+    }
+
+    @Test
+    void updateExtra_replacesTheLinkedMenuItems() {
+        var burger = new MenuItem(1L, "Burger", "", BigDecimal.TEN, "", true, new HashSet<>(), null);
+        var wrap = new MenuItem(2L, "Wrap", "", BigDecimal.TEN, "", true, new HashSet<>(), null);
+        var existing = new Extra(1L, "Cheese", BigDecimal.ONE, true, new HashSet<>(Set.of(burger)));
+        var dto = new ExtraRequestDto("Cheese", BigDecimal.ONE, true, Set.of(2L));
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(menuItemRepository.findAllById(Set.of(2L))).thenReturn(List.of(wrap));
+        when(repository.save(existing)).thenReturn(existing);
+
+        var result = service.updateExtra(dto, 1L);
+
+        assertEquals(1, result.getMenuItems().size());
+        assertTrue(result.getMenuItems().contains(wrap));
+        assertFalse(result.getMenuItems().contains(burger));
+    }
+
+    @Test
+    void updateExtra_withEmptyMenuItemIds_removesAllLinks() {
+        var burger = new MenuItem(1L, "Burger", "", BigDecimal.TEN, "", true, new HashSet<>(), null);
+        var existing = new Extra(1L, "Cheese", BigDecimal.ONE, true, new HashSet<>(Set.of(burger)));
+        var dto = new ExtraRequestDto("Cheese", BigDecimal.ONE, true, Set.of());
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(menuItemRepository.findAllById(Set.of())).thenReturn(List.of());
+        when(repository.save(existing)).thenReturn(existing);
+
+        var result = service.updateExtra(dto, 1L);
+
+        assertTrue(result.getMenuItems().isEmpty());
+    }
+
+    @Test
+    void updateExtra_withoutMenuItemIds_leavesTheLinksUnchanged() {
+        var burger = new MenuItem(1L, "Burger", "", BigDecimal.TEN, "", true, new HashSet<>(), null);
+        var existing = new Extra(1L, "Cheese", BigDecimal.ONE, true, new HashSet<>(Set.of(burger)));
+        var dto = new ExtraRequestDto("Cheese", BigDecimal.ONE, true, null);
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.save(existing)).thenReturn(existing);
+
+        var result = service.updateExtra(dto, 1L);
+
+        assertEquals(1, result.getMenuItems().size());
+        assertTrue(result.getMenuItems().contains(burger));
+        verifyNoInteractions(menuItemRepository);
+    }
+
+    @Test
+    void updateExtra_throwsWhenAMenuItemDoesNotExist() {
+        var existing = new Extra(1L, "Cheese", BigDecimal.ONE, true, new HashSet<>());
+        var dto = new ExtraRequestDto("Cheese", BigDecimal.ONE, true, Set.of(999L));
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(menuItemRepository.findAllById(Set.of(999L))).thenReturn(List.of());
+
+        var exception = assertThrows(ResourceNotFoundException.class, () -> service.updateExtra(dto, 1L));
+
+        assertEquals("One or more menu items were not found", exception.getMessage());
+        verify(repository, never()).save(any());
     }
 
     @Test
