@@ -101,6 +101,11 @@ public class PaymentService {
             }
 
             try {
+                Order order = orderService.findByIdOrThrow(orderId);
+                if (amountNotMatches(order, session)) {
+                    logAmountNotMatchesError(session, orderId, order);
+                    return;
+                }
                 orderService.payOrder(orderId, email);
                 log.info("Order {} marked as paid from session {}", orderId, session.getId());
             } catch (OrderAlreadyPaidException ignore) {
@@ -110,6 +115,7 @@ public class PaymentService {
             }
         }
     }
+
 
     public void confirmPaymentFromStripe(Long orderId) throws StripeException {
 
@@ -125,6 +131,11 @@ public class PaymentService {
 
         String email = (session.getCustomerDetails() == null) ? null : session.getCustomerDetails().getEmail();
         if (email == null || email.isBlank()) {
+            return;
+        }
+
+        if (amountNotMatches(order, session)) {
+            logAmountNotMatchesError(session, orderId, order);
             return;
         }
 
@@ -176,5 +187,13 @@ public class PaymentService {
 
     private long toCents(BigDecimal amount) {
         return amount.multiply(BigDecimal.valueOf(100)).longValue();
+    }
+
+    private boolean amountNotMatches(Order order, Session session) {
+        return !Long.valueOf(toCents(order.getTotalPrice())).equals(session.getAmountTotal());
+    }
+
+    private void logAmountNotMatchesError(Session session, Long orderId, Order order) {
+        log.error("Session {} was paid {} cents but order {} totals {} cents — NOT marking paid, refund it manually", session.getId(), session.getAmountTotal(), orderId, toCents(order.getTotalPrice()));
     }
 }

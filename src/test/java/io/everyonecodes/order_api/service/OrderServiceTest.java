@@ -4,6 +4,7 @@ import io.everyonecodes.order_api.entity.*;
 import io.everyonecodes.order_api.exception.InvalidOrderRequestException;
 import io.everyonecodes.order_api.exception.OrderAlreadyPaidException;
 import io.everyonecodes.order_api.exception.ResourceNotFoundException;
+import io.everyonecodes.order_api.payment.CheckoutSessionExpirer;
 import io.everyonecodes.order_api.repository.OrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,8 @@ class OrderServiceTest {
     private ExtraService extraService;
     @Mock
     private ReceiptService receiptService;
+    @Mock
+    private CheckoutSessionExpirer checkoutSessionExpirer;
 
     private Order order;
     private MenuItem menuItem;
@@ -1054,5 +1057,47 @@ class OrderServiceTest {
         verifyNoMoreInteractions(orderRepository);
 
         assertTrue(order.getIsFulfilled());
+    }
+
+    @Test
+    void updateQuantity_expiresTheOpenCheckoutSession() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        var orderedItem = new OrderedItem();
+        orderedItem.setId(10L);
+        orderedItem.setQuantity(1);
+        orderedItem.setPriceAtPurchase(BigDecimal.valueOf(10));
+        order.getOrderedItems().add(orderedItem);
+
+        orderService.updateQuantity(1L, 10L, 3);
+
+        verify(checkoutSessionExpirer).expireOpenSession(order);
+    }
+
+    @Test
+    void updateQuantity_doesNotExpireTheCheckoutSessionWhenTheChangeIsRejected() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        var orderedItem = new OrderedItem();
+        orderedItem.setId(10L);
+        order.getOrderedItems().add(orderedItem);
+
+        assertThrows(InvalidOrderRequestException.class, () -> orderService.updateQuantity(1L, 10L, 0));
+
+        verifyNoInteractions(checkoutSessionExpirer);
+    }
+
+    @Test
+    void removeItemFromOrder_expiresTheOpenCheckoutSession() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        var orderedItem = new OrderedItem();
+        orderedItem.setId(2L);
+        orderedItem.setMenuItem(menuItem);
+        order.getOrderedItems().add(orderedItem);
+
+        orderService.removeItemFromOrder(1L, 2L);
+
+        verify(checkoutSessionExpirer).expireOpenSession(order);
     }
 }

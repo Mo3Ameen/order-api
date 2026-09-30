@@ -6,6 +6,7 @@ import io.everyonecodes.order_api.entity.*;
 import io.everyonecodes.order_api.exception.InvalidOrderRequestException;
 import io.everyonecodes.order_api.exception.OrderAlreadyPaidException;
 import io.everyonecodes.order_api.exception.ResourceNotFoundException;
+import io.everyonecodes.order_api.payment.CheckoutSessionExpirer;
 import io.everyonecodes.order_api.repository.OrderRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,12 +23,14 @@ public class OrderService {
     private final MenuItemService menuItemService;
     private final ExtraService extraService;
     private final ReceiptService receiptService;
+    private final CheckoutSessionExpirer checkoutSessionExpirer;
 
-    public OrderService(OrderRepository orderRepository, MenuItemService menuItemService, ExtraService extraService, ReceiptService receiptService) {
+    public OrderService(OrderRepository orderRepository, MenuItemService menuItemService, ExtraService extraService, ReceiptService receiptService, CheckoutSessionExpirer checkoutSessionExpirer) {
         this.orderRepository = orderRepository;
         this.menuItemService = menuItemService;
         this.extraService = extraService;
         this.receiptService = receiptService;
+        this.checkoutSessionExpirer = checkoutSessionExpirer;
     }
 
     public List<Order> findAll() {
@@ -105,6 +108,7 @@ public class OrderService {
 
         order.getOrderedItems().add(orderedItem);
         applyTotalPrice(order);
+        checkoutSessionExpirer.expireOpenSession(order);
         return orderRepository.save(order);
     }
 
@@ -116,6 +120,7 @@ public class OrderService {
 
         order.getOrderedItems().remove(orderedItem);
         order.setTotalPrice(calculateTotalPrice(order));
+        checkoutSessionExpirer.expireOpenSession(order);
         return orderRepository.save(order);
     }
 
@@ -150,7 +155,7 @@ public class OrderService {
         }
 
         applyTotalPrice(order);
-
+        checkoutSessionExpirer.expireOpenSession(order);
         return orderRepository.save(order);
     }
 
@@ -168,7 +173,7 @@ public class OrderService {
 
         item.getSelectedExtras().remove(extra);
         order.setTotalPrice(calculateTotalPrice(order));
-
+        checkoutSessionExpirer.expireOpenSession(order);
         return orderRepository.save(order);
     }
 
@@ -202,7 +207,7 @@ public class OrderService {
         selectedExtra.setOrderedItem(item);
         item.getSelectedExtras().add(selectedExtra);
         applyTotalPrice(order);
-
+        checkoutSessionExpirer.expireOpenSession(order);
         return orderRepository.save(order);
     }
 
