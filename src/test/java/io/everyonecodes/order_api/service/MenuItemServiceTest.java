@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -211,7 +212,7 @@ class MenuItemServiceTest {
 
     @Test
     void postMenuItem_preservesAnExplicitInactiveFlag() {
-        var dto = new MenuItemRequestDto("Burger", "", BigDecimal.TEN, "", false, 1L);
+        var dto = new MenuItemRequestDto("Burger", "", BigDecimal.TEN, "", false, 1L, null);
         var category = new Category();
         when(categoryService.findByIdOrThrow(1L)).thenReturn(category);
         when(repository.save(any(MenuItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -254,5 +255,137 @@ class MenuItemServiceTest {
         verify(categoryService).findByIdOrThrow(2L);
         verify(repository).save(existingItem);
         verifyNoMoreInteractions(repository, categoryService);
+    }
+
+    @Test
+    void postMenuItem_linksTheRequestedExtras() {
+        var dto = new MenuItemRequestDto("Burger", "", BigDecimal.TEN, "", true, 1L, Set.of(10L, 20L));
+        var cheese = new Extra(10L, "Cheese", BigDecimal.ONE, true, new HashSet<>());
+        var bacon = new Extra(20L, "Bacon", BigDecimal.TWO, true, new HashSet<>());
+        when(categoryService.findByIdOrThrow(1L)).thenReturn(new Category());
+        when(repository.save(any(MenuItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(extraService.findAllById(Set.of(10L, 20L))).thenReturn(List.of(cheese, bacon));
+
+        var result = service.postMenuItem(dto);
+
+        verify(extraService).findAllById(Set.of(10L, 20L));
+        verify(extraService).addMenuItem(result, 10L);
+        verify(extraService).addMenuItem(result, 20L);
+        verifyNoMoreInteractions(extraService);
+        assertEquals(2, result.getExtras().size());
+        assertTrue(result.getExtras().contains(cheese));
+        assertTrue(result.getExtras().contains(bacon));
+    }
+
+    @Test
+    void postMenuItem_withoutExtraIds_doesNotTouchTheExtras() {
+        var dto = new MenuItemRequestDto("Burger", "", BigDecimal.TEN, "", true, 1L, null);
+        when(categoryService.findByIdOrThrow(1L)).thenReturn(new Category());
+        when(repository.save(any(MenuItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var result = service.postMenuItem(dto);
+
+        assertTrue(result.getExtras().isEmpty());
+        verifyNoInteractions(extraService);
+    }
+
+    @Test
+    void postMenuItem_throwsWhenAnExtraDoesNotExist() {
+        var dto = new MenuItemRequestDto("Burger", "", BigDecimal.TEN, "", true, 1L, Set.of(10L, 999L));
+        var cheese = new Extra(10L, "Cheese", BigDecimal.ONE, true, new HashSet<>());
+        when(categoryService.findByIdOrThrow(1L)).thenReturn(new Category());
+        when(repository.save(any(MenuItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(extraService.findAllById(Set.of(10L, 999L))).thenReturn(List.of(cheese));
+
+        var exception = assertThrows(ResourceNotFoundException.class, () -> service.postMenuItem(dto));
+
+        assertEquals("One or more extras were not found", exception.getMessage());
+        verify(extraService, never()).addMenuItem(any(), anyLong());
+        verify(extraService, never()).removeMenuItem(any(), anyLong());
+    }
+
+    @Test
+    void putMenuItem_addsNewExtras_removesMissingOnes_andKeepsTheRest() {
+        Long id = 1L;
+        var cheese = new Extra(1L, "Cheese", BigDecimal.ONE, true, new HashSet<>());
+        var bacon = new Extra(2L, "Bacon", BigDecimal.TWO, true, new HashSet<>());
+        var onions = new Extra(3L, "Onions", BigDecimal.ONE, true, new HashSet<>());
+        var existingItem = new MenuItem();
+        existingItem.setId(id);
+        existingItem.getExtras().add(cheese);
+        existingItem.getExtras().add(bacon);
+        var dto = new MenuItemRequestDto("Burger", "", BigDecimal.TEN, "", true, 1L, Set.of(2L, 3L));
+        when(repository.findById(id)).thenReturn(Optional.of(existingItem));
+        when(categoryService.findByIdOrThrow(1L)).thenReturn(new Category());
+        when(extraService.findAllById(Set.of(2L, 3L))).thenReturn(List.of(bacon, onions));
+        when(repository.save(existingItem)).thenReturn(existingItem);
+
+        var result = service.putMenuItem(dto, id);
+
+        verify(extraService).removeMenuItem(existingItem, 1L);
+        verify(extraService).addMenuItem(existingItem, 3L);
+        verify(extraService, never()).addMenuItem(existingItem, 2L);
+        verify(extraService, never()).removeMenuItem(existingItem, 2L);
+        assertEquals(2, result.getExtras().size());
+        assertTrue(result.getExtras().contains(bacon));
+        assertTrue(result.getExtras().contains(onions));
+        assertFalse(result.getExtras().contains(cheese));
+        verify(repository).save(existingItem);
+    }
+
+    @Test
+    void putMenuItem_withEmptyExtraIds_removesAllExtras() {
+        Long id = 1L;
+        var cheese = new Extra(1L, "Cheese", BigDecimal.ONE, true, new HashSet<>());
+        var existingItem = new MenuItem();
+        existingItem.setId(id);
+        existingItem.getExtras().add(cheese);
+        var dto = new MenuItemRequestDto("Burger", "", BigDecimal.TEN, "", true, 1L, Set.of());
+        when(repository.findById(id)).thenReturn(Optional.of(existingItem));
+        when(categoryService.findByIdOrThrow(1L)).thenReturn(new Category());
+        when(extraService.findAllById(Set.of())).thenReturn(List.of());
+        when(repository.save(existingItem)).thenReturn(existingItem);
+
+        var result = service.putMenuItem(dto, id);
+
+        verify(extraService).removeMenuItem(existingItem, 1L);
+        verify(extraService, never()).addMenuItem(any(), anyLong());
+        assertTrue(result.getExtras().isEmpty());
+    }
+
+    @Test
+    void putMenuItem_withoutExtraIds_leavesTheExtrasUnchanged() {
+        Long id = 1L;
+        var cheese = new Extra(1L, "Cheese", BigDecimal.ONE, true, new HashSet<>());
+        var existingItem = new MenuItem();
+        existingItem.setId(id);
+        existingItem.getExtras().add(cheese);
+        var dto = new MenuItemRequestDto("Burger", "", BigDecimal.TEN, "", true, 1L, null);
+        when(repository.findById(id)).thenReturn(Optional.of(existingItem));
+        when(categoryService.findByIdOrThrow(1L)).thenReturn(new Category());
+        when(repository.save(existingItem)).thenReturn(existingItem);
+
+        var result = service.putMenuItem(dto, id);
+
+        assertEquals(1, result.getExtras().size());
+        assertTrue(result.getExtras().contains(cheese));
+        verifyNoInteractions(extraService);
+    }
+
+    @Test
+    void putMenuItem_throwsWhenAnExtraDoesNotExist() {
+        Long id = 1L;
+        var existingItem = new MenuItem();
+        existingItem.setId(id);
+        var dto = new MenuItemRequestDto("Burger", "", BigDecimal.TEN, "", true, 1L, Set.of(999L));
+        when(repository.findById(id)).thenReturn(Optional.of(existingItem));
+        when(categoryService.findByIdOrThrow(1L)).thenReturn(new Category());
+        when(extraService.findAllById(Set.of(999L))).thenReturn(List.of());
+
+        var exception = assertThrows(ResourceNotFoundException.class, () -> service.putMenuItem(dto, id));
+
+        assertEquals("One or more extras were not found", exception.getMessage());
+        verify(extraService, never()).addMenuItem(any(), anyLong());
+        verify(extraService, never()).removeMenuItem(any(), anyLong());
     }
 }
