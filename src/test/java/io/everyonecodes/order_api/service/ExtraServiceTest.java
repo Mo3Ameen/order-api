@@ -183,4 +183,74 @@ class ExtraServiceTest {
         verify(repository).findById(2L);
         verifyNoMoreInteractions(repository);
     }
+
+    @Test
+    void addMenuItem_addsTheMenuItemToTheExtraAndSaves() {
+        var menuItem = new MenuItem();
+        menuItem.setId(1L);
+        var extra = new Extra(10L, "Cheese", BigDecimal.ONE, true, new HashSet<>());
+        when(repository.findById(10L)).thenReturn(Optional.of(extra));
+
+        service.addMenuItem(menuItem, 10L);
+
+        assertEquals(1, extra.getMenuItems().size());
+        assertTrue(extra.getMenuItems().contains(menuItem));
+        verify(repository).findById(10L);
+        verify(repository).save(extra);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void addMenuItem_twice_keepsASingleEntry() {
+        var menuItem = new MenuItem();
+        menuItem.setId(1L);
+        var extra = new Extra(10L, "Cheese", BigDecimal.ONE, true, new HashSet<>());
+        when(repository.findById(10L)).thenReturn(Optional.of(extra));
+
+        service.addMenuItem(menuItem, 10L);
+        service.addMenuItem(menuItem, 10L);
+
+        assertEquals(1, extra.getMenuItems().size());
+        verify(repository, times(2)).findById(10L);
+        verify(repository, times(2)).save(extra);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void addMenuItem_throwsWhenTheExtraDoesNotExist() {
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+
+        var exception = assertThrows(ResourceNotFoundException.class, () -> service.addMenuItem(new MenuItem(), 99L));
+
+        assertEquals("Extra 99 not found", exception.getMessage());
+        verify(repository).findById(99L);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void removeMenuItem_removesTheMenuItemFromTheExtraAndSaves() {
+        var menuItem = new MenuItem();
+        menuItem.setId(1L);
+        var extra = new Extra(10L, "Cheese", BigDecimal.ONE, true, new HashSet<>());
+        extra.getMenuItems().add(menuItem);
+        when(repository.findById(10L)).thenReturn(Optional.of(extra));
+
+        service.removeMenuItem(menuItem, 10L);
+
+        assertTrue(extra.getMenuItems().isEmpty());
+        verify(repository).findById(10L);
+        verify(repository).save(extra);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void removeMenuItem_throwsWhenTheExtraDoesNotExist() {
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+
+        var exception = assertThrows(ResourceNotFoundException.class, () -> service.removeMenuItem(new MenuItem(), 99L));
+
+        assertEquals("Extra 99 not found", exception.getMessage());
+        verify(repository).findById(99L);
+        verifyNoMoreInteractions(repository);
+    }
 }

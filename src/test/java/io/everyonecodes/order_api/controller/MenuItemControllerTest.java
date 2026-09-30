@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -252,7 +253,7 @@ class MenuItemControllerTest {
 
     @Test
     void postMenuItem_createsAnActiveMenuItemByDefault() {
-        var request = new MenuItemRequestDto("Veggie Burger", "Plant based", BigDecimal.valueOf(11), "veggie.jpg", null, activeCategory.getId());
+        var request = new MenuItemRequestDto("Veggie Burger", "Plant based", BigDecimal.valueOf(11), "veggie.jpg", null, activeCategory.getId(), null);
 
         var result = restTestClient.post()
                 .uri("/api/menuItems")
@@ -273,7 +274,7 @@ class MenuItemControllerTest {
 
     @Test
     void putMenuItem_updatesEveryField() {
-        var request = new MenuItemRequestDto("Updated Burger", "New description", BigDecimal.valueOf(12), "updated.jpg", false, activeCategory.getId());
+        var request = new MenuItemRequestDto("Updated Burger", "New description", BigDecimal.valueOf(12), "updated.jpg", false, activeCategory.getId(), null);
 
         var result = restTestClient.put()
                 .uri("/api/menuItems/{id}", activeMenuItem.getId())
@@ -291,6 +292,140 @@ class MenuItemControllerTest {
         assertEquals(BigDecimal.valueOf(12), result.getPrice());
         assertEquals("updated.jpg", result.getImageUrl());
         assertFalse(result.getIsActive());
+    }
+
+    @Test
+    void postMenuItem_linksTheRequestedExtras() {
+        var request = new MenuItemRequestDto("Veggie Burger", "Plant based", BigDecimal.valueOf(11), "veggie.jpg", true, activeCategory.getId(), Set.of(activeExtra.getId()));
+
+        var result = restTestClient.post()
+                .uri("/api/menuItems")
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(MenuItem.class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(result);
+        assertEquals(1, result.getExtras().size());
+        assertEquals(activeExtra.getId(), result.getExtras().iterator().next().getId());
+
+        var extras = restTestClient.get()
+                .uri("/api/menuItems/{id}/extras", result.getId())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Extra[].class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(extras);
+        assertEquals(1, extras.length);
+        assertEquals(activeExtra.getId(), extras[0].getId());
+    }
+
+    @Test
+    void postMenuItem_returns404_whenAnExtraDoesNotExist() {
+        var request = new MenuItemRequestDto("Ghost Burger", "", BigDecimal.valueOf(11), "", true, activeCategory.getId(), Set.of(999999L));
+
+        var result = restTestClient.post()
+                .uri("/api/menuItems")
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange()
+                .expectStatus().isNotFound()
+                .expectBody(String.class)
+                .returnResult().getResponseBody();
+
+        assertEquals("One or more extras were not found", result);
+    }
+
+    @Test
+    void putMenuItem_replacesTheLinkedExtras() {
+        var bacon = new Extra();
+        bacon.setName("Bacon");
+        bacon.setPrice(BigDecimal.valueOf(2));
+        bacon.setIsActive(true);
+        bacon = extraRepository.save(bacon);
+        var request = new MenuItemRequestDto("Cheeseburger", "Beef burger", BigDecimal.valueOf(10), "", true, activeCategory.getId(), Set.of(bacon.getId()));
+
+        var result = restTestClient.put()
+                .uri("/api/menuItems/{id}", activeMenuItem.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(MenuItem.class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(result);
+        assertEquals(1, result.getExtras().size());
+        assertEquals(bacon.getId(), result.getExtras().iterator().next().getId());
+
+        var extras = restTestClient.get()
+                .uri("/api/menuItems/{id}/extras", activeMenuItem.getId())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Extra[].class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(extras);
+        assertEquals(1, extras.length);
+        assertEquals("Bacon", extras[0].getName());
+    }
+
+    @Test
+    void putMenuItem_withEmptyExtraIds_removesAllExtras() {
+        var request = new MenuItemRequestDto("Cheeseburger", "Beef burger", BigDecimal.valueOf(10), "", true, activeCategory.getId(), Set.of());
+
+        var result = restTestClient.put()
+                .uri("/api/menuItems/{id}", activeMenuItem.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(MenuItem.class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(result);
+        assertTrue(result.getExtras().isEmpty());
+
+        var extras = restTestClient.get()
+                .uri("/api/menuItems/{id}/extras", activeMenuItem.getId())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Extra[].class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(extras);
+        assertEquals(0, extras.length);
+    }
+
+    @Test
+    void putMenuItem_withoutExtraIds_keepsTheLinkedExtras() {
+        var request = new MenuItemRequestDto("Cheeseburger", "Beef burger", BigDecimal.valueOf(10), "", true, activeCategory.getId(), null);
+
+        restTestClient.put()
+                .uri("/api/menuItems/{id}", activeMenuItem.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange()
+                .expectStatus().isOk();
+
+        var extras = restTestClient.get()
+                .uri("/api/menuItems/{id}/extras", activeMenuItem.getId())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Extra[].class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(extras);
+        assertEquals(1, extras.length);
+        assertEquals(activeExtra.getId(), extras[0].getId());
     }
 
     @Test

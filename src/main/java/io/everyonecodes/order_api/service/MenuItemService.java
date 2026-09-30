@@ -7,8 +7,11 @@ import io.everyonecodes.order_api.entity.MenuItem;
 import io.everyonecodes.order_api.exception.ResourceNotFoundException;
 import io.everyonecodes.order_api.repository.MenuItemRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class MenuItemService {
@@ -49,6 +52,7 @@ public class MenuItemService {
         repository.save(menuItem);
     }
 
+    @Transactional
     public MenuItem postMenuItem(MenuItemRequestDto menuItemRequestDto) {
         MenuItem menuItem = new MenuItem();
         menuItem.setPrice(menuItemRequestDto.getPrice());
@@ -57,9 +61,12 @@ public class MenuItemService {
         menuItem.setCategory(categoryService.findByIdOrThrow(menuItemRequestDto.getCategoryId()));
         menuItem.setImageUrl(menuItemRequestDto.getImageUrl());
         menuItem.setIsActive(menuItemRequestDto.getIsActive() != null ? menuItemRequestDto.getIsActive() : true);
-        return repository.save(menuItem);
+        MenuItem saved = repository.save(menuItem);
+        syncExtras(saved, menuItemRequestDto.getExtraIds());
+        return saved;
     }
 
+    @Transactional
     public MenuItem putMenuItem(MenuItemRequestDto menuItemRequestDto, Long id) {
         MenuItem existingMenuItem = findByIdOrThrow(id);
         existingMenuItem.setCategory(categoryService.findByIdOrThrow(menuItemRequestDto.getCategoryId()));
@@ -68,10 +75,38 @@ public class MenuItemService {
         existingMenuItem.setDescription(menuItemRequestDto.getDescription());
         existingMenuItem.setIsActive(menuItemRequestDto.getIsActive());
         existingMenuItem.setImageUrl(menuItemRequestDto.getImageUrl());
+        syncExtras(existingMenuItem, menuItemRequestDto.getExtraIds());
         return repository.save(existingMenuItem);
     }
 
     public List<MenuItem> findAll() {
         return repository.findAll();
+    }
+
+    private void syncExtras(MenuItem menuItem, Set<Long> extraIds) {
+        if (extraIds == null) {
+            return;
+        }
+
+        List<Extra> wantedExtras = extraService.findAllById(extraIds);
+        if (wantedExtras.size() != extraIds.size()) {
+            throw new ResourceNotFoundException("One or more extras were not found");
+        }
+
+        Set<Extra> currentExtras = new HashSet<>(menuItem.getExtras());
+        for (Extra extra : currentExtras) {
+            if (!wantedExtras.contains(extra)) {
+                extraService.removeMenuItem(menuItem, extra.getId());
+            }
+        }
+
+        for (Extra extra : wantedExtras) {
+            if (!currentExtras.contains(extra)) {
+                extraService.addMenuItem(menuItem, extra.getId());
+            }
+        }
+
+        menuItem.getExtras().clear();
+        menuItem.getExtras().addAll(wantedExtras);
     }
 }

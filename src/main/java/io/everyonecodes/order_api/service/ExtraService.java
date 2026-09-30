@@ -5,6 +5,7 @@ import io.everyonecodes.order_api.entity.MenuItem;
 import io.everyonecodes.order_api.exception.ResourceNotFoundException;
 import io.everyonecodes.order_api.repository.ExtraRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
@@ -52,5 +53,19 @@ public class ExtraService {
 
     public List<Extra> findAllById(Set<Long> extraIds) {
         return repository.findAllById(extraIds);
+    }
+
+    @Transactional
+    public void addMenuItem(MenuItem menuItem, Long extraId) {
+        Extra extra = findExtraByIdOrThrow(extraId);
+        extra.getMenuItems().add(menuItem);
+        repository.save(extra);
+    }
+
+    @Transactional
+    public void removeMenuItem(MenuItem menuItem, Long extraId) {
+        Extra extra = findExtraByIdOrThrow(extraId);
+        extra.getMenuItems().remove(menuItem);
+        repository.save(extra);
     }
 }
