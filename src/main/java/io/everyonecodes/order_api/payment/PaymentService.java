@@ -29,7 +29,7 @@ public class PaymentService {
     private final String successUrl;
     private final String cancelUrl;
 
-    public PaymentService(OrderService orderService, @Value("${stripe.webhook.secret}") String webhookSecret,@Value("${stripe.success.url}") String successUrl, @Value("${stripe.cancel.url}") String cancelUrl) {
+    public PaymentService(OrderService orderService, @Value("${stripe.webhook.secret}") String webhookSecret, @Value("${stripe.success.url}") String successUrl, @Value("${stripe.cancel.url}") String cancelUrl) {
         this.orderService = orderService;
         this.webhookSecret = webhookSecret;
         this.successUrl = successUrl;
@@ -39,15 +39,23 @@ public class PaymentService {
     public String initiateOrderPayment(Long orderId, String email) throws StripeException {
         Order order = orderService.getValidOrder(orderId);
         if (order.getStripeSessionId() != null) {
+            Session session = null;
             try {
-                Session session = Session.retrieve(order.getStripeSessionId());
-                if ("open".equals(session.getStatus())) {
-                    return session.getUrl();
-                } else if ("complete".equals(session.getStatus())) {
-                    throw new OrderAlreadyPaidException("Order " + order.getId() + " is already paid!");
-                }
+                session = Session.retrieve(order.getStripeSessionId());
             } catch (StripeException e) {
                 log.warn("Could not retrieve stored session {} for order {} — creating a new one", order.getStripeSessionId(), orderId);
+            }
+            if (session != null) {
+                if ("complete".equals(session.getStatus())) {
+                    throw new OrderAlreadyPaidException("Order " + order.getId() + " is already paid!");
+                }
+                if ("open".equals(session.getStatus())) {
+                    if (Long.valueOf(toCents(order.getTotalPrice())).equals(session.getAmountTotal())) {
+                        return session.getUrl();
+                    }
+                    log.info("Total of order {} changed since session {} was created — expiring it and creating a new one", orderId, session.getId());
+                    session.expire();
+                }
             }
         }
         order.setCustomerEmail(email);
@@ -144,9 +152,7 @@ public class PaymentService {
                                 .PriceData
                                 .builder()
                                 .setCurrency("eur")
-                                .setUnitAmount(order.getTotalPrice()
-                                        .multiply(BigDecimal.valueOf(100))
-                                        .longValue())
+                                .setUnitAmount(toCents(order.getTotalPrice()))
                                 .setProductData(SessionCreateParams.LineItem
                                         .PriceData
                                         .ProductData
@@ -159,12 +165,16 @@ public class PaymentService {
                 .build();
 
         RequestOptions options = RequestOptions.builder()
-                .setIdempotencyKey("order-" + order.getId() + "-" + order.getTotalPrice())
+                .setIdempotencyKey("order-" + order.getId() + "-" + order.getTotalPrice() + "-" + order.getStripeSessionId())
                 .build();
         Session session = Session.create(sessionCreateParams, options);
         order.setStripeSessionId(session.getId());
         orderService.save(order);
         log.info("Session created successfully for order with Id : {}", order.getId());
         return session.getUrl();
+    }
+
+    private long toCents(BigDecimal amount) {
+        return amount.multiply(BigDecimal.valueOf(100)).longValue();
     }
 }
