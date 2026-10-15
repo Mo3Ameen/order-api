@@ -17,7 +17,7 @@ public class PaymentController {
     }
 
     @PostMapping("/{orderId}")
-    public String initiateOrderPayment(@PathVariable Long orderId, @RequestParam @Email String email) throws StripeException {
+    public String initiateOrderPayment(@PathVariable Long orderId, @RequestParam(required = false) @Email String email) throws StripeException {
         return paymentService.initiateOrderPayment(orderId, email);
     }
 }

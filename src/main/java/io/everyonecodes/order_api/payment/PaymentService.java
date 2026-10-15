@@ -58,7 +58,7 @@ public class PaymentService {
                 }
             }
         }
-        order.setCustomerEmail(email);
+        order.setCustomerEmail(email == null || email.isBlank() ? null : email);
         return getCheckoutSession(order);
     }
 
