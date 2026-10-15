@@ -144,6 +144,73 @@ class ExtraControllerTest {
         assertFalse(result.getIsActive());
     }
 
+
+    private RestTestClient.ResponseSpec postExtraWithPrice(BigDecimal price) {
+        var request = new ExtraRequestDto("Priced Extra", price, true, null);
+
+        return restTestClient.post()
+                .uri("/api/extras")
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange();
+    }
+
+    private RestTestClient.ResponseSpec putExtraWithPrice(BigDecimal price) {
+        var request = new ExtraRequestDto("Priced Extra", price, true, null);
+
+        return restTestClient.put()
+                .uri("/api/extras/{id}", activeExtra.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange();
+    }
+
+    @Test
+    void postExtra_acceptsTheHighestAllowedPrice() {
+        postExtraWithPrice(new BigDecimal("999.99"))
+                .expectStatus().isCreated();
+    }
+
+    @Test
+    void postExtra_returns400_whenThePriceIsAboveTheLimit() {
+        postExtraWithPrice(new BigDecimal("1000.00"))
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void postExtra_returns400_whenThePriceHasMoreThanTwoDecimals() {
+        postExtraWithPrice(new BigDecimal("9.999"))
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void putExtra_acceptsTheHighestAllowedPrice() {
+        putExtraWithPrice(new BigDecimal("999.99"))
+                .expectStatus().isOk();
+    }
+
+    @Test
+    void putExtra_returns400_whenThePriceIsAboveTheLimit() {
+        putExtraWithPrice(new BigDecimal("1000.00"))
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void putExtra_returns400_whenThePriceHasMoreThanTwoDecimals() {
+        putExtraWithPrice(new BigDecimal("9.999"))
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void postExtra_returns400WithAGenericMessage_whenThePriceIsMissing() {
+        postExtraWithPrice(null)
+                .expectStatus().isBadRequest()
+                .expectBody(String.class)
+                .isEqualTo("The request breaks a data rule: a required value is missing, too long or out of range.");
+    }
+
     @Test
     void postExtra_linksTheRequestedMenuItems() {
         var request = new ExtraRequestDto("Bacon", BigDecimal.valueOf(2), true, Set.of(wrap.getId()));
