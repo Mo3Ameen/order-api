@@ -3,6 +3,7 @@ package io.everyonecodes.order_api.controller;
 import io.everyonecodes.order_api.dto.ExtraRequestDto;
 import io.everyonecodes.order_api.entity.Extra;
 import io.everyonecodes.order_api.service.ExtraService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,13 +34,13 @@ public class ExtraController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Extra postExtra(@RequestBody ExtraRequestDto extraRequestDto) {
+    public Extra postExtra(@Valid @RequestBody ExtraRequestDto extraRequestDto) {
         return service.createExtra(extraRequestDto);
     }
 
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public Extra putExtra(@RequestBody ExtraRequestDto extraRequestDto, @PathVariable Long id) {
+    public Extra putExtra(@Valid @RequestBody ExtraRequestDto extraRequestDto, @PathVariable Long id) {
         return service.updateExtra(extraRequestDto, id);
     }
 

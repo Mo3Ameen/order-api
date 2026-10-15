@@ -294,6 +294,73 @@ class MenuItemControllerTest {
         assertFalse(result.getIsActive());
     }
 
+
+    private RestTestClient.ResponseSpec postMenuItemWithPrice(BigDecimal price) {
+        var request = new MenuItemRequestDto("Priced Burger", "Price limit test", price, "", true, activeCategory.getId(), null);
+
+        return restTestClient.post()
+                .uri("/api/menuItems")
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange();
+    }
+
+    private RestTestClient.ResponseSpec putMenuItemWithPrice(BigDecimal price) {
+        var request = new MenuItemRequestDto("Priced Burger", "Price limit test", price, "", true, activeCategory.getId(), null);
+
+        return restTestClient.put()
+                .uri("/api/menuItems/{id}", activeMenuItem.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange();
+    }
+
+    @Test
+    void postMenuItem_acceptsTheHighestAllowedPrice() {
+        postMenuItemWithPrice(new BigDecimal("999.99"))
+                .expectStatus().isCreated();
+    }
+
+    @Test
+    void postMenuItem_returns400_whenThePriceIsAboveTheLimit() {
+        postMenuItemWithPrice(new BigDecimal("1000.00"))
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void postMenuItem_returns400_whenThePriceHasMoreThanTwoDecimals() {
+        postMenuItemWithPrice(new BigDecimal("9.999"))
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void putMenuItem_acceptsTheHighestAllowedPrice() {
+        putMenuItemWithPrice(new BigDecimal("999.99"))
+                .expectStatus().isOk();
+    }
+
+    @Test
+    void putMenuItem_returns400_whenThePriceIsAboveTheLimit() {
+        putMenuItemWithPrice(new BigDecimal("1000.00"))
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void putMenuItem_returns400_whenThePriceHasMoreThanTwoDecimals() {
+        putMenuItemWithPrice(new BigDecimal("9.999"))
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void postMenuItem_returns400WithAGenericMessage_whenThePriceIsMissing() {
+        postMenuItemWithPrice(null)
+                .expectStatus().isBadRequest()
+                .expectBody(String.class)
+                .isEqualTo("The request breaks a data rule: a required value is missing, too long or out of range.");
+    }
+
     @Test
     void postMenuItem_linksTheRequestedExtras() {
         var request = new MenuItemRequestDto("Veggie Burger", "Plant based", BigDecimal.valueOf(11), "veggie.jpg", true, activeCategory.getId(), Set.of(activeExtra.getId()));
