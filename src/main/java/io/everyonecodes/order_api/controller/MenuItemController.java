@@ -4,6 +4,7 @@ import io.everyonecodes.order_api.dto.MenuItemRequestDto;
 import io.everyonecodes.order_api.entity.Extra;
 import io.everyonecodes.order_api.entity.MenuItem;
 import io.everyonecodes.order_api.service.MenuItemService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -53,13 +54,13 @@ public class MenuItemController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public MenuItem postMenuItem(@RequestBody MenuItemRequestDto menuItemRequestDto) {
+    public MenuItem postMenuItem(@Valid @RequestBody MenuItemRequestDto menuItemRequestDto) {
         return service.postMenuItem(menuItemRequestDto);
     }
 
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public MenuItem putMenuItem(@RequestBody MenuItemRequestDto menuItemRequestDto, @PathVariable Long id) {
+    public MenuItem putMenuItem(@Valid @RequestBody MenuItemRequestDto menuItemRequestDto, @PathVariable Long id) {
         return service.putMenuItem(menuItemRequestDto, id);
     }
 
