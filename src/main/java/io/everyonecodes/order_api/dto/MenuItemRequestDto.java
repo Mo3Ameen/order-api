@@ -1,5 +1,6 @@
 package io.everyonecodes.order_api.dto;
 
+import jakarta.validation.constraints.Digits;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -15,6 +16,7 @@ import java.util.Set;
 public class MenuItemRequestDto {
     private String name;
     private String description;
+    @Digits(integer = 3, fraction = 2)
     private BigDecimal price;
     private String imageUrl;
     private Boolean isActive;
