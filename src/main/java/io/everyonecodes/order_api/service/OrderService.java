@@ -133,12 +133,14 @@ public class OrderService {
         } else if (email == null || email.isBlank()) {
             throw new InvalidOrderRequestException("Customer email is required to complete payment.");
         } else {
-            order.setCustomerEmail(email);
-            order.setIsPaid(true);
-            order.setPaidAt(LocalDateTime.now());
-            Order savedOrder = orderRepository.save(order);
-            receiptService.sendReceipt(savedOrder);
-            return savedOrder;
+            int rowsChanged = orderRepository.markAsPaid(orderId, email, LocalDateTime.now());
+            if (rowsChanged == 0) {
+                throw new OrderAlreadyPaidException("Order " + orderId + " is already paid!");
+            }
+
+            Order paidOrder = findByIdOrThrow(orderId);
+            receiptService.sendReceipt(paidOrder);
+            return paidOrder;
         }
     }
 
