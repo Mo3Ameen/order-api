@@ -431,19 +431,32 @@ class OrderServiceTest {
     }
 
     @Test
-    void payOrder() {
+    void payOrder_throwsWhenAnotherRequestPaidFirst() {
         when(orderRepository.findById(1L)).thenReturn(Optional.ofNullable(order));
+        when(orderRepository.markAsPaid(eq(1L), eq("example@gmail.com"), any(LocalDateTime.class))).thenReturn(0);
         order.setIsPaid(false);
         order.getOrderedItems().add(new OrderedItem());
 
-        when(orderRepository.save(order)).thenReturn(order);
-        orderService.payOrder(1L, "example@gmail.com");
+        var ex = assertThrows(OrderAlreadyPaidException.class, () -> orderService.payOrder(1L, "example@gmail.com"));
 
-        verify(orderRepository, times(1)).save(order);
+        verifyNoInteractions(receiptService);
+        assertEquals("Order " + order.getId() + " is already paid!", ex.getMessage());
+    }
+
+    @Test
+    void payOrder() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.ofNullable(order));
+        when(orderRepository.markAsPaid(eq(1L), eq("example@gmail.com"), any(LocalDateTime.class))).thenReturn(1);
+        order.setIsPaid(false);
+        order.getOrderedItems().add(new OrderedItem());
+
+        var result = orderService.payOrder(1L, "example@gmail.com");
+
+        verify(orderRepository).markAsPaid(eq(1L), eq("example@gmail.com"), any(LocalDateTime.class));
         verify(receiptService, times(1)).sendReceipt(order);
         verifyNoMoreInteractions(orderRepository);
 
-        assertTrue(order.getIsPaid());
+        assertSame(order, result);
     }
 
     @Test
