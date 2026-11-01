@@ -2,11 +2,12 @@ package io.everyonecodes.order_api.controller;
 
 import io.everyonecodes.order_api.dto.AddItemRequestDto;
 import io.everyonecodes.order_api.dto.KitchenTicketDto;
+import io.everyonecodes.order_api.dto.PayOrderRequestDto;
 import io.everyonecodes.order_api.entity.Order;
 import io.everyonecodes.order_api.service.OrderService;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -69,8 +70,8 @@ public class OrderController {
         return orderService.removeSelectedExtraOnOrderedItemFromOrder(orderId, itemId, selectedExtraId);
     }
 
-    @PostMapping("/{orderId}/pay")
-    public Order payOrder(@PathVariable Long orderId, @RequestParam @Email String email) {
-        return orderService.payOrder(orderId, email);
+    @PostMapping(value = "/{orderId}/pay", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public Order payOrder(@PathVariable Long orderId, @RequestBody @Valid PayOrderRequestDto request) {
+        return orderService.payOrder(orderId, request.getEmail());
     }
 }

@@ -2,6 +2,7 @@ package io.everyonecodes.order_api.controller;
 
 import io.everyonecodes.order_api.dto.AddItemRequestDto;
 import io.everyonecodes.order_api.dto.KitchenTicketDto;
+import io.everyonecodes.order_api.dto.PayOrderRequestDto;
 import io.everyonecodes.order_api.entity.*;
 import io.everyonecodes.order_api.repository.CategoryRepository;
 import io.everyonecodes.order_api.repository.ExtraRepository;
@@ -1071,16 +1072,35 @@ class OrderControllerTest {
 
             restTestClient
                     .post()
-                    .uri("/api/orders/{orderId}/pay?email={email}", order.getId(), "customer@example.com")
+                    .uri("/api/orders/{orderId}/pay", order.getId())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new PayOrderRequestDto("customer@example.com"))
                     .exchange()
                     .expectStatus()
                     .isUnauthorized();
         }
 
+        @Test
+        void returns415_whenEmailIsSentAsAForm() {
+            var order = createOrderWithItem();
+
+            restTestClient
+                    .post()
+                    .uri("/api/orders/{orderId}/pay", order.getId())
+                    .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body("email=customer@example.com")
+                    .exchange()
+                    .expectStatus()
+                    .isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        }
+
         private RestTestClient.ResponseSpec pay(Long orderId, String email) {
             return restTestClient
                     .post()
-                    .uri("/api/orders/{orderId}/pay?email={email}", orderId, email)
+                    .uri("/api/orders/{orderId}/pay", orderId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new PayOrderRequestDto(email))
                     .headers(headers -> headers.setBasicAuth("admin", "admin123"))
                     .exchange();
         }
