@@ -1080,6 +1080,21 @@ class OrderControllerTest {
                     .isUnauthorized();
         }
 
+        @Test
+        void returns415_whenEmailIsSentAsAForm() {
+            var order = createOrderWithItem();
+
+            restTestClient
+                    .post()
+                    .uri("/api/orders/{orderId}/pay", order.getId())
+                    .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body("email=customer@example.com")
+                    .exchange()
+                    .expectStatus()
+                    .isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        }
+
         private RestTestClient.ResponseSpec pay(Long orderId, String email) {
             return restTestClient
                     .post()
