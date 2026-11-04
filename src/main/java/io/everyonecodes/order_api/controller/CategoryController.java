@@ -1,6 +1,8 @@
 package io.everyonecodes.order_api.controller;
 
+import io.everyonecodes.order_api.dto.CategoryItemDto;
 import io.everyonecodes.order_api.entity.Category;
+import io.everyonecodes.order_api.entity.MenuItem;
 import io.everyonecodes.order_api.service.CategoryService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -41,6 +43,11 @@ public class CategoryController {
     @GetMapping("/all/{id}")
     public Category getCategory(@PathVariable Long id) {
         return service.findByIdOrThrow(id);
+    }
+
+    @GetMapping("/all/{id}/items")
+    public List<CategoryItemDto> getItemsByCategory(@PathVariable Long id) {
+        return service.findItemsOfCategory(id);
     }
 
     @PostMapping

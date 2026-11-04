@@ -1,5 +1,6 @@
 package io.everyonecodes.order_api.service;
 
+import io.everyonecodes.order_api.dto.CategoryItemDto;
 import io.everyonecodes.order_api.entity.Category;
 import io.everyonecodes.order_api.entity.MenuItem;
 import io.everyonecodes.order_api.exception.ResourceNotFoundException;
@@ -63,6 +64,18 @@ public class CategoryService {
 
     public Category findByIdOrThrow(Long categoryId) {
         return repository.findById(categoryId).orElseThrow(() -> new ResourceNotFoundException("Category " + categoryId + " not found"));
+    }
+
+    public List<CategoryItemDto> findItemsOfCategory(Long categoryId) {
+        Category category = findByIdOrThrow(categoryId);
+        return menuItemRepository.findByCategory(category).stream()
+                .map(item -> new CategoryItemDto(
+                        item.getId(),
+                        item.getName(),
+                        item.getPrice(),
+                        item.getIsActive(),
+                        item.getDeactivatedWithCategory()))
+                .toList();
     }
 
     private void switchOffActiveItems(Category category) {
