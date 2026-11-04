@@ -1,8 +1,10 @@
 package io.everyonecodes.order_api.service;
 
 import io.everyonecodes.order_api.entity.Category;
+import io.everyonecodes.order_api.entity.MenuItem;
 import io.everyonecodes.order_api.exception.ResourceNotFoundException;
 import io.everyonecodes.order_api.repository.CategoryRepository;
+import io.everyonecodes.order_api.repository.MenuItemRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,6 +24,8 @@ class CategoryServiceTest {
 
     @Mock
     private CategoryRepository repository;
+    @Mock
+    private MenuItemRepository menuItemRepository;
 
     @Test
     void findAll() {
@@ -161,6 +165,62 @@ class CategoryServiceTest {
         verify(repository).findById(id);
         verify(repository).save(existingCategory);
         verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void softDeleteCategoryById_switchesOffTheActiveItemsAndRemembersThem() {
+        Long id = 1L;
+        var existingCategory = new Category(id, "Pizzas", true, new HashSet<>());
+        var activeItem = new MenuItem();
+        activeItem.setIsActive(true);
+        var items = List.of(activeItem);
+
+        when(repository.findById(id)).thenReturn(Optional.of(existingCategory));
+        when(menuItemRepository.findByCategoryAndIsActive(existingCategory, true)).thenReturn(items);
+
+        service.softDeleteCategoryById(id);
+
+        assertFalse(activeItem.getIsActive());
+        assertTrue(activeItem.getDeactivatedWithCategory());
+        verify(menuItemRepository).saveAll(items);
+    }
+
+    @Test
+    void updateCategory_switchesOffTheActiveItems_whenTheCategoryIsTurnedOff() {
+        Long id = 1L;
+        var inputCategory = new Category();
+        inputCategory.setName("Pizzas");
+        inputCategory.setIsActive(false);
+        var existingCategory = new Category(id, "Pizzas", true, new HashSet<>());
+        var activeItem = new MenuItem();
+        activeItem.setIsActive(true);
+        var items = List.of(activeItem);
+
+        when(repository.findById(id)).thenReturn(Optional.of(existingCategory));
+        when(repository.save(existingCategory)).thenReturn(existingCategory);
+        when(menuItemRepository.findByCategoryAndIsActive(existingCategory, true)).thenReturn(items);
+
+        service.updateCategory(inputCategory, id);
+
+        assertFalse(activeItem.getIsActive());
+        assertTrue(activeItem.getDeactivatedWithCategory());
+        verify(menuItemRepository).saveAll(items);
+    }
+
+    @Test
+    void updateCategory_leavesTheItemsAlone_whenTheCategoryStaysActive() {
+        Long id = 1L;
+        var inputCategory = new Category();
+        inputCategory.setName("Renamed Pizzas");
+        inputCategory.setIsActive(true);
+        var existingCategory = new Category(id, "Pizzas", true, new HashSet<>());
+
+        when(repository.findById(id)).thenReturn(Optional.of(existingCategory));
+        when(repository.save(existingCategory)).thenReturn(existingCategory);
+
+        service.updateCategory(inputCategory, id);
+
+        verifyNoInteractions(menuItemRepository);
     }
 
     @Test
