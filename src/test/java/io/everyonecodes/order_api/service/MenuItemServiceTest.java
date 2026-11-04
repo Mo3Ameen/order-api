@@ -37,9 +37,9 @@ class MenuItemServiceTest {
     @Test
     void findAll() {
         List<MenuItem>  menuItems = List.of(
-                new MenuItem(1L, "Pizza", "", BigDecimal.valueOf(10), "", true, new HashSet<>(), null),
-                new MenuItem(2L, "Burger", "", BigDecimal.valueOf(12), "", false, new HashSet<>(), null),
-                new MenuItem(3L, "Cola", "", BigDecimal.valueOf(2.5), "", true, new HashSet<>(), null)
+                new MenuItem(1L, "Pizza", "", BigDecimal.valueOf(10), "", true, false, new HashSet<>(), null),
+                new MenuItem(2L, "Burger", "", BigDecimal.valueOf(12), "", false, false, new HashSet<>(), null),
+                new MenuItem(3L, "Cola", "", BigDecimal.valueOf(2.5), "", true, false, new HashSet<>(), null)
         );
 
         when(repository.findAll()).thenReturn(menuItems);
@@ -47,9 +47,9 @@ class MenuItemServiceTest {
         var result = service.findAll();
 
         List<MenuItem> expected = List.of(
-                new MenuItem(1L, "Pizza", "", BigDecimal.valueOf(10), "", true, new HashSet<>(), null),
-                new MenuItem(2L, "Burger", "", BigDecimal.valueOf(12), "", false, new HashSet<>(), null),
-                new MenuItem(3L, "Cola", "", BigDecimal.valueOf(2.5), "", true, new HashSet<>(), null)
+                new MenuItem(1L, "Pizza", "", BigDecimal.valueOf(10), "", true, false, new HashSet<>(), null),
+                new MenuItem(2L, "Burger", "", BigDecimal.valueOf(12), "", false, false, new HashSet<>(), null),
+                new MenuItem(3L, "Cola", "", BigDecimal.valueOf(2.5), "", true, false, new HashSet<>(), null)
         );
 
         assertEquals(expected, result);
@@ -86,7 +86,7 @@ class MenuItemServiceTest {
     @Test
     void findByIdAndIsActiveOrThrow_withExistingMenuItem() {
         Long id = 1L;
-        var expected = new MenuItem(1L, "Pizza", "", BigDecimal.valueOf(10), "", true, new HashSet<>(), null);
+        var expected = new MenuItem(1L, "Pizza", "", BigDecimal.valueOf(10), "", true, false, new HashSet<>(), null);
 
         when(repository.findByIdAndIsActiveTrue(id)).thenReturn(Optional.of(expected));
 

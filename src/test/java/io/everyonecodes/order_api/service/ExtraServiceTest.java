@@ -158,8 +158,8 @@ class ExtraServiceTest {
 
     @Test
     void createExtra_linksTheRequestedMenuItems() {
-        var burger = new MenuItem(1L, "Burger", "", BigDecimal.TEN, "", true, new HashSet<>(), null);
-        var wrap = new MenuItem(2L, "Wrap", "", BigDecimal.TEN, "", true, new HashSet<>(), null);
+        var burger = new MenuItem(1L, "Burger", "", BigDecimal.TEN, "", true, false, new HashSet<>(), null);
+        var wrap = new MenuItem(2L, "Wrap", "", BigDecimal.TEN, "", true, false, new HashSet<>(), null);
         var dto = new ExtraRequestDto("Bacon", BigDecimal.TWO, true, Set.of(1L, 2L));
         when(menuItemRepository.findAllById(Set.of(1L, 2L))).thenReturn(List.of(burger, wrap));
         when(repository.save(any(Extra.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -175,7 +175,7 @@ class ExtraServiceTest {
 
     @Test
     void createExtra_throwsWhenAMenuItemDoesNotExist() {
-        var burger = new MenuItem(1L, "Burger", "", BigDecimal.TEN, "", true, new HashSet<>(), null);
+        var burger = new MenuItem(1L, "Burger", "", BigDecimal.TEN, "", true, false, new HashSet<>(), null);
         var dto = new ExtraRequestDto("Bacon", BigDecimal.TWO, true, Set.of(1L, 999L));
         when(menuItemRepository.findAllById(Set.of(1L, 999L))).thenReturn(List.of(burger));
 
@@ -205,8 +205,8 @@ class ExtraServiceTest {
 
     @Test
     void updateExtra_replacesTheLinkedMenuItems() {
-        var burger = new MenuItem(1L, "Burger", "", BigDecimal.TEN, "", true, new HashSet<>(), null);
-        var wrap = new MenuItem(2L, "Wrap", "", BigDecimal.TEN, "", true, new HashSet<>(), null);
+        var burger = new MenuItem(1L, "Burger", "", BigDecimal.TEN, "", true, false, new HashSet<>(), null);
+        var wrap = new MenuItem(2L, "Wrap", "", BigDecimal.TEN, "", true, false, new HashSet<>(), null);
         var existing = new Extra(1L, "Cheese", BigDecimal.ONE, true, new HashSet<>(Set.of(burger)));
         var dto = new ExtraRequestDto("Cheese", BigDecimal.ONE, true, Set.of(2L));
         when(repository.findById(1L)).thenReturn(Optional.of(existing));
@@ -222,7 +222,7 @@ class ExtraServiceTest {
 
     @Test
     void updateExtra_withEmptyMenuItemIds_removesAllLinks() {
-        var burger = new MenuItem(1L, "Burger", "", BigDecimal.TEN, "", true, new HashSet<>(), null);
+        var burger = new MenuItem(1L, "Burger", "", BigDecimal.TEN, "", true, false, new HashSet<>(), null);
         var existing = new Extra(1L, "Cheese", BigDecimal.ONE, true, new HashSet<>(Set.of(burger)));
         var dto = new ExtraRequestDto("Cheese", BigDecimal.ONE, true, Set.of());
         when(repository.findById(1L)).thenReturn(Optional.of(existing));
@@ -236,7 +236,7 @@ class ExtraServiceTest {
 
     @Test
     void updateExtra_withoutMenuItemIds_leavesTheLinksUnchanged() {
-        var burger = new MenuItem(1L, "Burger", "", BigDecimal.TEN, "", true, new HashSet<>(), null);
+        var burger = new MenuItem(1L, "Burger", "", BigDecimal.TEN, "", true, false, new HashSet<>(), null);
         var existing = new Extra(1L, "Cheese", BigDecimal.ONE, true, new HashSet<>(Set.of(burger)));
         var dto = new ExtraRequestDto("Cheese", BigDecimal.ONE, true, null);
         when(repository.findById(1L)).thenReturn(Optional.of(existing));
