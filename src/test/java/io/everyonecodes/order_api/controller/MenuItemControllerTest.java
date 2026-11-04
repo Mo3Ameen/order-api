@@ -354,6 +354,24 @@ class MenuItemControllerTest {
     }
 
     @Test
+    void postMenuItem_returns400_whenThePriceIsNegative() {
+        postMenuItemWithPrice(new BigDecimal("-5.00"))
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void putMenuItem_returns400_whenThePriceIsNegative() {
+        putMenuItemWithPrice(new BigDecimal("-5.00"))
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void postMenuItem_acceptsAPriceOfZero() {
+        postMenuItemWithPrice(new BigDecimal("0.00"))
+                .expectStatus().isCreated();
+    }
+
+    @Test
     void postMenuItem_returns400WithAGenericMessage_whenThePriceIsMissing() {
         postMenuItemWithPrice(null)
                 .expectStatus().isBadRequest()

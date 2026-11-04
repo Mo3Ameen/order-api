@@ -204,6 +204,24 @@ class ExtraControllerTest {
     }
 
     @Test
+    void postExtra_returns400_whenThePriceIsNegative() {
+        postExtraWithPrice(new BigDecimal("-5.00"))
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void putExtra_returns400_whenThePriceIsNegative() {
+        putExtraWithPrice(new BigDecimal("-5.00"))
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void postExtra_acceptsAPriceOfZero() {
+        postExtraWithPrice(new BigDecimal("0.00"))
+                .expectStatus().isCreated();
+    }
+
+    @Test
     void postExtra_returns400WithAGenericMessage_whenThePriceIsMissing() {
         postExtraWithPrice(null)
                 .expectStatus().isBadRequest()
