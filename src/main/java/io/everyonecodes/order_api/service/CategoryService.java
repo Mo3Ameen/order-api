@@ -68,7 +68,7 @@ public class CategoryService {
 
     public List<CategoryItemDto> findItemsOfCategory(Long categoryId) {
         Category category = findByIdOrThrow(categoryId);
-        return menuItemRepository.findByCategory(category).stream()
+        return menuItemRepository.findByCategoryOrderByIdAsc(category).stream()
                 .map(item -> new CategoryItemDto(
                         item.getId(),
                         item.getName(),

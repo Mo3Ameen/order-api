@@ -265,7 +265,7 @@ class CategoryServiceTest {
         offBeforeAlready.setIsActive(false);
 
         when(repository.findById(id)).thenReturn(Optional.of(category));
-        when(menuItemRepository.findByCategory(category)).thenReturn(List.of(switchedOffByCategory, offBeforeAlready));
+        when(menuItemRepository.findByCategoryOrderByIdAsc(category)).thenReturn(List.of(switchedOffByCategory, offBeforeAlready));
 
         var result = service.findItemsOfCategory(id);
 

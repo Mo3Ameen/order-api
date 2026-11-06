@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -289,5 +290,28 @@ class CategoryControllerTest {
                 .uri("/api/categories/all/{id}/items", activeCategory.getId())
                 .exchange()
                 .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    void getItemsOfCategory_returnsTheItemsSortedById() {
+        var first = saveItem(activeCategory, "First", true);
+        var second = saveItem(activeCategory, "Second", false);
+        var third = saveItem(activeCategory, "Third", true);
+
+        // changing a row makes the database store it last, so the order is no longer the id order
+        first.setName("First (changed)");
+        menuItemRepository.saveAndFlush(first);
+
+        var result = restTestClient.get()
+                .uri("/api/categories/all/{id}/items", activeCategory.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(CategoryItemDto[].class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(result);
+        var ids = Stream.of(result).map(CategoryItemDto::getId).toList();
+        assertEquals(List.of(first.getId(), second.getId(), third.getId()), ids);
     }
 }
