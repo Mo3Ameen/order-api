@@ -1,6 +1,7 @@
 package io.everyonecodes.order_api.controller;
 
 import io.everyonecodes.order_api.dto.CategoryItemDto;
+import io.everyonecodes.order_api.dto.CategoryReactivationRequestDto;
 import io.everyonecodes.order_api.entity.Category;
 import io.everyonecodes.order_api.entity.MenuItem;
 import io.everyonecodes.order_api.repository.CategoryRepository;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -313,5 +315,76 @@ class CategoryControllerTest {
         assertNotNull(result);
         var ids = Stream.of(result).map(CategoryItemDto::getId).toList();
         assertEquals(List.of(first.getId(), second.getId(), third.getId()), ids);
+    }
+
+    // ---------- PUT /api/categories/{id}/reactivate ----------
+
+    @Test
+    void reactivateCategory_switchesOnTheCategoryAndThePickedItems() {
+        var picked = saveItem(activeCategory, "Cheeseburger", true);
+        saveItem(activeCategory, "Veggie Burger", true);
+
+        restTestClient.delete()
+                .uri("/api/categories/{id}", activeCategory.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .exchange()
+                .expectStatus().isNoContent();
+
+        var category = restTestClient.put()
+                .uri("/api/categories/{id}/reactivate", activeCategory.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new CategoryReactivationRequestDto(Set.of(picked.getId())))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Category.class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(category);
+        assertTrue(category.getIsActive());
+
+        var items = restTestClient.get()
+                .uri("/api/categories/all/{id}/items", activeCategory.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(CategoryItemDto[].class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(items);
+        var byName = Stream.of(items).collect(Collectors.toMap(CategoryItemDto::getName, dto -> dto));
+        assertTrue(byName.get("Cheeseburger").getIsActive());
+        assertFalse(byName.get("Cheeseburger").getWasActiveBeforeTurnOff());
+        assertFalse(byName.get("Veggie Burger").getIsActive());
+        assertFalse(byName.get("Veggie Burger").getWasActiveBeforeTurnOff());
+    }
+
+    @Test
+    void reactivateCategory_returns404AndChangesNothing_whenAnItemIsNotInTheCategory() {
+        var ownItem = saveItem(inactiveCategory, "Old Burger", false);
+        var foreignItem = saveItem(activeCategory, "Cheeseburger", true);
+
+        var result = restTestClient.put()
+                .uri("/api/categories/{id}/reactivate", inactiveCategory.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new CategoryReactivationRequestDto(Set.of(ownItem.getId(), foreignItem.getId())))
+                .exchange()
+                .expectStatus().isNotFound()
+                .expectBody(String.class)
+                .returnResult().getResponseBody();
+
+        assertEquals("One or more menu items were not found in category " + inactiveCategory.getId(), result);
+        assertFalse(categoryRepository.findById(inactiveCategory.getId()).orElseThrow().getIsActive());
+    }
+
+    @Test
+    void reactivateCategory_returns401_whenNotAuthenticated() {
+        restTestClient.put()
+                .uri("/api/categories/{id}/reactivate", inactiveCategory.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new CategoryReactivationRequestDto(Set.of()))
+                .exchange()
+                .expectStatus().isUnauthorized();
     }
 }
