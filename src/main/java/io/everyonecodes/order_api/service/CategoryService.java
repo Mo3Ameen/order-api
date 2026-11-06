@@ -1,19 +1,27 @@
 package io.everyonecodes.order_api.service;
 
+import io.everyonecodes.order_api.dto.CategoryItemDto;
 import io.everyonecodes.order_api.entity.Category;
+import io.everyonecodes.order_api.entity.MenuItem;
 import io.everyonecodes.order_api.exception.ResourceNotFoundException;
 import io.everyonecodes.order_api.repository.CategoryRepository;
+import io.everyonecodes.order_api.repository.MenuItemRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class CategoryService {
 
     private final CategoryRepository repository;
+    private final MenuItemRepository menuItemRepository;
 
-    public CategoryService(CategoryRepository repository) {
+    public CategoryService(CategoryRepository repository, MenuItemRepository menuItemRepository) {
         this.repository = repository;
+        this.menuItemRepository = menuItemRepository;
     }
 
     // public/client methods
@@ -32,24 +40,74 @@ public class CategoryService {
 
     public Category createCategory(Category category) {
         category.setId(null);
-        category.setIsActive(category.getIsActive() != null ? category.getIsActive() : true);
+        category.setIsActive(category.getIsActive() == null || category.getIsActive());
         return repository.save(category);
     }
 
+    @Transactional
     public Category updateCategory(Category category, Long id) {
-        Category existingCategory = findByIdOrThrow( id);
+        Category existingCategory = findByIdOrThrow(id);
+        boolean isBeingTurnedOf = Boolean.TRUE.equals(existingCategory.getIsActive()) && Boolean.FALSE.equals(category.getIsActive());
         existingCategory.setName(category.getName());
         existingCategory.setIsActive(category.getIsActive());
+        if (isBeingTurnedOf) {
+            switchOffActiveItems(existingCategory);
+        }
         return repository.save(existingCategory);
     }
 
+    @Transactional
     public void softDeleteCategoryById(Long id) {
         Category category = findByIdOrThrow(id);
         category.setIsActive(false);
         repository.save(category);
+        switchOffActiveItems(category);
     }
 
     public Category findByIdOrThrow(Long categoryId) {
         return repository.findById(categoryId).orElseThrow(() -> new ResourceNotFoundException("Category " + categoryId + " not found"));
+    }
+
+    public List<CategoryItemDto> findItemsOfCategory(Long categoryId) {
+        Category category = findByIdOrThrow(categoryId);
+        return menuItemRepository.findByCategoryOrderByIdAsc(category).stream()
+                .map(item -> new CategoryItemDto(
+                        item.getId(),
+                        item.getName(),
+                        item.getPrice(),
+                        item.getIsActive(),
+                        item.getDeactivatedWithCategory()))
+                .toList();
+    }
+
+    @Transactional
+    public Category reactivateCategory(Long categoryId, Set<Long> menuItemIds) {
+        Category category = findByIdOrThrow(categoryId);
+        List<MenuItem> items = menuItemRepository.findByCategoryOrderByIdAsc(category);
+        Set<Long> pickedIds = menuItemIds == null ? Set.of() : menuItemIds;
+
+        Set<Long> idsInCategory = items.stream().map(MenuItem::getId).collect(Collectors.toSet());
+        if (!idsInCategory.containsAll(pickedIds)) {
+            throw new ResourceNotFoundException("One or more menu items were not found in category " + categoryId);
+        }
+
+        category.setIsActive(true);
+        items.forEach(item -> {
+            if (pickedIds.contains(item.getId())) {
+                item.setIsActive(true);
+            }
+            item.setDeactivatedWithCategory(false);
+        });
+        menuItemRepository.saveAll(items);
+        return repository.save(category);
+    }
+
+    private void switchOffActiveItems(Category category) {
+        List<MenuItem> activeItems = menuItemRepository.findByCategoryAndIsActive(category, true);
+        activeItems.forEach(item -> {
+            item.setIsActive(false);
+            item.setDeactivatedWithCategory(true);
+        });
+        menuItemRepository.saveAll(activeItems);
     }
 }

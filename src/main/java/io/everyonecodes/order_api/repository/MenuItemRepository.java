@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
     List<MenuItem> findByCategoryAndIsActive(Category category, Boolean isActive);
     Optional<MenuItem> findByIdAndIsActiveTrue(Long id);
+    List<MenuItem> findByCategoryOrderByIdAsc(Category category);
 }

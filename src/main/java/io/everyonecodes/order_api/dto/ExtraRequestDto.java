@@ -1,5 +1,6 @@
 package io.everyonecodes.order_api.dto;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -15,6 +16,7 @@ import java.util.Set;
 @AllArgsConstructor
 public class ExtraRequestDto {
     private String name;
+    @DecimalMin("0.00")
     @Digits(integer = 3, fraction = 2)
     private BigDecimal price;
     private Boolean isActive;

@@ -27,6 +27,7 @@ public class MenuItem {
     private BigDecimal price;
     private String imageUrl;
     private Boolean isActive;
+    private Boolean deactivatedWithCategory = false;
     @ManyToMany(mappedBy = "menuItems")
     private Set<Extra> extras = new HashSet<>();
     @ManyToOne
