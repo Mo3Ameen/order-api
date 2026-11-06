@@ -11,6 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -243,5 +244,47 @@ class CategoryServiceTest {
         assertEquals("Category 4 not found", exception.getMessage());
         verify(repository).findById(4L);
         verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void findItemsOfCategory_returnsEveryItemWithItsRememberFlag() {
+        Long id = 1L;
+        var category = new Category(id, "Pizzas", false, new HashSet<>());
+
+        var switchedOffByCategory = new MenuItem();
+        switchedOffByCategory.setId(10L);
+        switchedOffByCategory.setName("Margherita");
+        switchedOffByCategory.setPrice(new BigDecimal("8.50"));
+        switchedOffByCategory.setIsActive(false);
+        switchedOffByCategory.setDeactivatedWithCategory(true);
+
+        var offBeforeAlready = new MenuItem();
+        offBeforeAlready.setId(11L);
+        offBeforeAlready.setName("Old Special");
+        offBeforeAlready.setPrice(new BigDecimal("9.00"));
+        offBeforeAlready.setIsActive(false);
+
+        when(repository.findById(id)).thenReturn(Optional.of(category));
+        when(menuItemRepository.findByCategory(category)).thenReturn(List.of(switchedOffByCategory, offBeforeAlready));
+
+        var result = service.findItemsOfCategory(id);
+
+        assertEquals(2, result.size());
+        assertEquals("Margherita", result.get(0).getName());
+        assertFalse(result.get(0).getIsActive());
+        assertTrue(result.get(0).getWasActiveBeforeTurnOff());
+        assertEquals("Old Special", result.get(1).getName());
+        assertFalse(result.get(1).getIsActive());
+        assertFalse(result.get(1).getWasActiveBeforeTurnOff());
+    }
+
+    @Test
+    void findItemsOfCategory_withMissingCategory_throws() {
+        when(repository.findById(4L)).thenReturn(Optional.empty());
+
+        var exception = assertThrows(ResourceNotFoundException.class, () -> service.findItemsOfCategory(4L));
+
+        assertEquals("Category 4 not found", exception.getMessage());
+        verifyNoInteractions(menuItemRepository);
     }
 }
