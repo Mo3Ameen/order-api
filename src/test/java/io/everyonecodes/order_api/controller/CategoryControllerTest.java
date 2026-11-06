@@ -1,7 +1,10 @@
 package io.everyonecodes.order_api.controller;
 
+import io.everyonecodes.order_api.dto.CategoryItemDto;
 import io.everyonecodes.order_api.entity.Category;
+import io.everyonecodes.order_api.entity.MenuItem;
 import io.everyonecodes.order_api.repository.CategoryRepository;
+import io.everyonecodes.order_api.repository.MenuItemRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +15,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,6 +31,8 @@ class CategoryControllerTest {
     protected RestTestClient restTestClient;
     @Autowired
     protected CategoryRepository categoryRepository;
+    @Autowired
+    protected MenuItemRepository menuItemRepository;
 
     protected Category activeCategory;
     protected Category inactiveCategory;
@@ -182,5 +189,105 @@ class CategoryControllerTest {
                 .expectStatus().isNoContent();
 
         assertFalse(categoryRepository.findById(activeCategory.getId()).orElseThrow().getIsActive());
+    }
+
+    // ---------- turning a category off, and GET /api/categories/all/{id}/items ----------
+
+    private MenuItem saveItem(Category category, String name, boolean isActive) {
+        var item = new MenuItem();
+        item.setName(name);
+        item.setDescription("test");
+        item.setPrice(new BigDecimal("9.50"));
+        item.setIsActive(isActive);
+        item.setCategory(category);
+        return menuItemRepository.save(item);
+    }
+
+    @Test
+    void deleteCategory_switchesOffItsActiveItemsAndRemembersThem() {
+        saveItem(activeCategory, "Cheeseburger", true);
+        saveItem(activeCategory, "Old Burger", false);
+
+        restTestClient.delete()
+                .uri("/api/categories/{id}", activeCategory.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .exchange()
+                .expectStatus().isNoContent();
+
+        var result = restTestClient.get()
+                .uri("/api/categories/all/{id}/items", activeCategory.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(CategoryItemDto[].class)
+                .returnResult().getResponseBody();
+
+        assertNotNull(result);
+        var byName = Stream.of(result).collect(Collectors.toMap(CategoryItemDto::getName, dto -> dto));
+        assertFalse(byName.get("Cheeseburger").getIsActive());
+        assertTrue(byName.get("Cheeseburger").getWasActiveBeforeTurnOff());
+        assertFalse(byName.get("Old Burger").getIsActive());
+        assertFalse(byName.get("Old Burger").getWasActiveBeforeTurnOff());
+    }
+
+    @Test
+    void putCategory_switchesOffItsActiveItems_whenTurnedOff() {
+        var item = saveItem(activeCategory, "Cheeseburger", true);
+        var request = new Category();
+        request.setName("Burgers");
+        request.setIsActive(false);
+
+        restTestClient.put()
+                .uri("/api/categories/{id}", activeCategory.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange()
+                .expectStatus().isOk();
+
+        var saved = menuItemRepository.findById(item.getId()).orElseThrow();
+        assertFalse(saved.getIsActive());
+        assertTrue(saved.getDeactivatedWithCategory());
+    }
+
+    @Test
+    void putCategory_leavesItsItemsAlone_whenOnlyRenamed() {
+        var item = saveItem(activeCategory, "Cheeseburger", true);
+        var request = new Category();
+        request.setName("Renamed Burgers");
+        request.setIsActive(true);
+
+        restTestClient.put()
+                .uri("/api/categories/{id}", activeCategory.getId())
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange()
+                .expectStatus().isOk();
+
+        var saved = menuItemRepository.findById(item.getId()).orElseThrow();
+        assertTrue(saved.getIsActive());
+        assertFalse(saved.getDeactivatedWithCategory());
+    }
+
+    @Test
+    void getItemsOfCategory_returns404_whenTheCategoryDoesNotExist() {
+        var result = restTestClient.get()
+                .uri("/api/categories/all/{id}/items", 999999L)
+                .headers(headers -> headers.setBasicAuth("admin", "admin123"))
+                .exchange()
+                .expectStatus().isNotFound()
+                .expectBody(String.class)
+                .returnResult().getResponseBody();
+
+        assertEquals("Category 999999 not found", result);
+    }
+
+    @Test
+    void getItemsOfCategory_returns401_whenNotAuthenticated() {
+        restTestClient.get()
+                .uri("/api/categories/all/{id}/items", activeCategory.getId())
+                .exchange()
+                .expectStatus().isUnauthorized();
     }
 }
