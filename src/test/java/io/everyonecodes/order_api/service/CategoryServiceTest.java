@@ -270,7 +270,7 @@ class CategoryServiceTest {
         var result = service.findItemsOfCategory(id);
 
         assertEquals(2, result.size());
-        assertEquals("Margherita", result.get(0).getName());
+        assertEquals("Margherita", result.getFirst().getName());
         assertFalse(result.get(0).getIsActive());
         assertTrue(result.get(0).getWasActiveBeforeTurnOff());
         assertEquals("Old Special", result.get(1).getName());
@@ -283,6 +283,85 @@ class CategoryServiceTest {
         when(repository.findById(4L)).thenReturn(Optional.empty());
 
         var exception = assertThrows(ResourceNotFoundException.class, () -> service.findItemsOfCategory(4L));
+
+        assertEquals("Category 4 not found", exception.getMessage());
+        verifyNoInteractions(menuItemRepository);
+    }
+
+    @Test
+    void reactivateCategory_switchesOnTheCategoryAndThePickedItems_andClearsAllFlags() {
+        Long id = 1L;
+        var category = new Category(id, "Pizzas", false, new HashSet<>());
+        var picked = new MenuItem();
+        picked.setId(10L);
+        picked.setIsActive(false);
+        picked.setDeactivatedWithCategory(true);
+        var notPicked = new MenuItem();
+        notPicked.setId(11L);
+        notPicked.setIsActive(false);
+        notPicked.setDeactivatedWithCategory(true);
+        var items = List.of(picked, notPicked);
+
+        when(repository.findById(id)).thenReturn(Optional.of(category));
+        when(menuItemRepository.findByCategoryOrderByIdAsc(category)).thenReturn(items);
+        when(repository.save(category)).thenReturn(category);
+
+        var result = service.reactivateCategory(id, Set.of(10L));
+
+        assertTrue(result.getIsActive());
+        assertTrue(picked.getIsActive());
+        assertFalse(picked.getDeactivatedWithCategory());
+        assertFalse(notPicked.getIsActive());
+        assertFalse(notPicked.getDeactivatedWithCategory());
+        verify(menuItemRepository).saveAll(items);
+    }
+
+    @Test
+    void reactivateCategory_withNoPickedItems_switchesOnOnlyTheCategory() {
+        Long id = 1L;
+        var category = new Category(id, "Pizzas", false, new HashSet<>());
+        var item = new MenuItem();
+        item.setId(10L);
+        item.setIsActive(false);
+        item.setDeactivatedWithCategory(true);
+
+        when(repository.findById(id)).thenReturn(Optional.of(category));
+        when(menuItemRepository.findByCategoryOrderByIdAsc(category)).thenReturn(List.of(item));
+        when(repository.save(category)).thenReturn(category);
+
+        var result = service.reactivateCategory(id, null);
+
+        assertTrue(result.getIsActive());
+        assertFalse(item.getIsActive());
+        assertFalse(item.getDeactivatedWithCategory());
+    }
+
+    @Test
+    void reactivateCategory_withAnItemFromAnotherCategory_throwsAndChangesNothing() {
+        Long id = 1L;
+        var category = new Category(id, "Pizzas", false, new HashSet<>());
+        var item = new MenuItem();
+        item.setId(10L);
+        item.setIsActive(false);
+
+        when(repository.findById(id)).thenReturn(Optional.of(category));
+        when(menuItemRepository.findByCategoryOrderByIdAsc(category)).thenReturn(List.of(item));
+
+        var exception = assertThrows(ResourceNotFoundException.class,
+                () -> service.reactivateCategory(id, Set.of(10L, 99L)));
+
+        assertEquals("One or more menu items were not found in category 1", exception.getMessage());
+        assertFalse(category.getIsActive());
+        verify(menuItemRepository, never()).saveAll(any());
+        verify(repository, never()).save(any(Category.class));
+    }
+
+    @Test
+    void reactivateCategory_withMissingCategory_throws() {
+        when(repository.findById(4L)).thenReturn(Optional.empty());
+
+        var exception = assertThrows(ResourceNotFoundException.class,
+                () -> service.reactivateCategory(4L, Set.of()));
 
         assertEquals("Category 4 not found", exception.getMessage());
         verifyNoInteractions(menuItemRepository);
