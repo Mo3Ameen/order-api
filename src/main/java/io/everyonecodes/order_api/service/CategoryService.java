@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class CategoryService {
@@ -76,6 +78,28 @@ public class CategoryService {
                         item.getIsActive(),
                         item.getDeactivatedWithCategory()))
                 .toList();
+    }
+
+    @Transactional
+    public Category reactivateCategory(Long categoryId, Set<Long> menuItemIds) {
+        Category category = findByIdOrThrow(categoryId);
+        List<MenuItem> items = menuItemRepository.findByCategoryOrderByIdAsc(category);
+        Set<Long> pickedIds = menuItemIds == null ? Set.of() : menuItemIds;
+
+        Set<Long> idsInCategory = items.stream().map(MenuItem::getId).collect(Collectors.toSet());
+        if (!idsInCategory.containsAll(pickedIds)) {
+            throw new ResourceNotFoundException("One or more menu items were not found in category " + categoryId);
+        }
+
+        category.setIsActive(true);
+        items.forEach(item -> {
+            if (pickedIds.contains(item.getId())) {
+                item.setIsActive(true);
+            }
+            item.setDeactivatedWithCategory(false);
+        });
+        menuItemRepository.saveAll(items);
+        return repository.save(category);
     }
 
     private void switchOffActiveItems(Category category) {

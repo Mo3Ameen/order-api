@@ -1,10 +1,12 @@
 package io.everyonecodes.order_api.controller;
 
 import io.everyonecodes.order_api.dto.CategoryItemDto;
+import io.everyonecodes.order_api.dto.CategoryReactivationRequestDto;
 import io.everyonecodes.order_api.entity.Category;
 import io.everyonecodes.order_api.entity.MenuItem;
 import io.everyonecodes.order_api.service.CategoryService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -60,6 +62,12 @@ public class CategoryController {
     @ResponseStatus(HttpStatus.OK)
     public Category putCategory(@RequestBody Category category, @PathVariable Long id) {
         return service.updateCategory(category, id);
+    }
+
+    @PutMapping(value = "/{id}/reactivate", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.OK)
+    public Category reactivateCategory(@PathVariable Long id, @RequestBody CategoryReactivationRequestDto request) {
+        return service.reactivateCategory(id, request.getMenuItemIds());
     }
 
     @DeleteMapping("/{id}")
