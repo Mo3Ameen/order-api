@@ -20,6 +20,7 @@ erDiagram
         varchar image_url
         bigint  category_id FK
         boolean is_active "soft delete flag"
+        boolean deactivated_with_category "switched off by its category"
     }
 
     extras {
@@ -81,6 +82,8 @@ erDiagram
 `categories` → `menu_items` → `extras`. This is what an admin edits.
 
 Nothing here is ever deleted. `is_active` hides a record instead, so orders that reference it stay readable — a hard delete would break the foreign keys of every past order containing that item.
+
+`menu_items.deactivated_with_category` is a memory for the admin. When a category is turned off, its active items are switched off and marked `true`, so the admin can later see which items were on last time. Turning the category back on clears the mark on every item of that category.
 
 `menu_item_extras` is a plain join table with a composite primary key of the two foreign keys. One extra (Bacon) can belong to many items, and one item can offer many extras.
 
